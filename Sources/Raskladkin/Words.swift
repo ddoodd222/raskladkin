@@ -71,14 +71,18 @@ final class Speller {
         let convCore = self.core(converted, backDir)
         let (langOrig, langConv) = dir == .enToRu ? ("en", "ru") : ("ru", "en")
         // Слово считается верным, только если оно целиком из букв своей раскладки.
-        let validOrig = core.allSatisfy { $0.isLetter || $0 == "'" || $0 == "-" } && isWord(core, lang: langOrig)
-        let validConv = script(of: convCore) != sc && isWord(convCore, lang: langConv)
+        // Проверяем в нижнем регистре: иначе «Xnj» словарь принимает как имя собственное.
+        let validOrig = core.allSatisfy { $0.isLetter || $0 == "'" || $0 == "-" } && isWord(core.lowercased(), lang: langOrig)
+        let validConv = script(of: convCore) != sc && isWord(convCore.lowercased(), lang: langConv)
         switch (validOrig, validConv) {
         case (true, false):
-            // Короткие английские «слова» (to, in, tot, ye) слишком часто попадаются при наборе
+            // Короткие английские «слова» (to, in, ok) слишком часто попадаются при наборе
             // русского в латинице, поэтому они не подтверждают раскладку, а просто не считаются.
             return core.count <= 3 && dir == .enToRu ? .unknown : .keep
-        case (true, true): return .keep
+        case (true, true):
+            // pf/xnj/tot: словарь знает и английское, и русское слово. Короткое латинское слово,
+            // которое в русской раскладке — обычное русское, почти всегда набрано не в той раскладке.
+            return core.count <= 3 && dir == .enToRu ? .convert : .keep
         case (false, true): return .convert
         default: return .unknown
         }

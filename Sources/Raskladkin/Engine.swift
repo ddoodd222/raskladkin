@@ -64,6 +64,7 @@ final class Engine {
     struct Word { var text: String; var verdict: Verdict }
     private var run: [Word] = []   // слова текущей серии (после последнего пробела каждое)
     private var current = ""       // слово, которое печатается сейчас
+    private var pending: [CGEvent] = []  // клавиши пользователя, нажатые во время нашей перепечатки
 
     var isTapRunning: Bool { tap != nil }
     var lastEvent = ""             // для отладки в меню
@@ -107,6 +108,50 @@ final class Engine {
         current = ""
     }
 
+    /// Конец нашей перепечатки: отдаём приложению клавиши, которые пользователь успел нажать,
+    /// и учитываем их в буфере слов.
+    private func finish() {
+        busy = false
+        let events = pending
+        pending = []
+        guard !events.isEmpty else { return }
+        for e in events { track(e) }
+        typingQueue.async { [self] in
+            for e in events {
+                post(e)
+                if let up = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(e.getIntegerValueField(.keyboardEventKeycode)), keyDown: false) {
+                    up.flags = e.flags
+                    post(up)
+                }
+            }
+        }
+    }
+
+    /// Только учёт клавиши в буфере слов, без хоткея и без запуска автомата.
+    private func track(_ event: CGEvent) {
+        let code = event.getIntegerValueField(.keyboardEventKeycode)
+        let flags = event.flags.intersection([.maskCommand, .maskShift, .maskAlternate, .maskControl])
+        if flags.contains(.maskCommand) || flags.contains(.maskControl) { reset(); return }
+        switch code {
+        case 36, 76, 48, 53, 123, 124, 125, 126, 115, 116, 119, 121, 117: reset(); return
+        case 51:
+            if !current.isEmpty { current.removeLast() } else if let last = run.popLast() { current = last.text }
+            return
+        default: break
+        }
+        var length = 0
+        var chars = [UniChar](repeating: 0, count: 8)
+        event.keyboardGetUnicodeString(maxStringLength: 8, actualStringLength: &length, unicodeString: &chars)
+        guard length > 0 else { return }
+        let s = String(utf16CodeUnits: chars, count: length)
+        if s == " " {
+            if !current.isEmpty { run.append(Word(text: current, verdict: .unknown)); current = ""; trimRun() }
+            return
+        }
+        guard let scalar = s.unicodeScalars.first, scalar.value >= 0x20, scalar.value != 0x7F else { reset(); return }
+        current += s
+    }
+
     // MARK: - Event tap
 
     fileprivate func handle(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
@@ -129,7 +174,12 @@ final class Engine {
             DispatchQueue.main.async { self.hotkeyPressed() }
             return nil // не пропускаем дальше, чтобы приложение не увидело сочетание
         }
-        guard !busy else { return pass }
+        if busy {
+            // Пока мы стираем и перепечатываем, пользователь продолжает печатать. Пропустить его клавиши
+            // сейчас — вклеить их внутрь нашей перепечатки («Почемуh ты нjе»). Задерживаем и отдаём после.
+            if let copy = event.copy() { pending.append(copy) }
+            return nil
+        }
         if flags.contains(.maskCommand) || flags.contains(.maskControl) { reset(); return pass }
 
         switch code {
@@ -209,7 +259,7 @@ final class Engine {
     // MARK: - Auto fix
 
     private func performAutoFix(_ words: [Word]) {
-        guard let layouts else { DispatchQueue.main.async { self.busy = false }; return }
+        guard let layouts else { DispatchQueue.main.async { self.finish() }; return }
         let n = words.reduce(0) { $0 + $1.text.count } + max(0, words.count - 1)
         var votes: [Direction: Int] = [:]
         for w in words where w.verdict == .convert {
@@ -229,7 +279,7 @@ final class Engine {
                 layouts.layout(for: target).select()
             }
             self.reset()
-            self.busy = false
+            self.finish()
         }
     }
 
@@ -307,9 +357,9 @@ final class Engine {
     }
 
     private func fixSelection(_ selection: String, saved: Snapshot?) {
-        guard let speller, let layouts else { busy = false; return }
+        guard let speller, let layouts else { finish(); return }
         let (fixed, changed) = speller.fix(selection)
-        guard changed else { NSSound.beep(); busy = false; return }
+        guard changed else { NSSound.beep(); finish(); return }
         let pb = NSPasteboard.general
         let snap = saved ?? snapshot(pb)
         pb.clearContents()
@@ -327,13 +377,13 @@ final class Engine {
                     layouts.layout(for: t).select()
                 }
                 self.reset()
-                self.busy = false
+                self.finish()
             }
         }
     }
 
     private func fixLastWord() {
-        guard let layouts else { busy = false; return }
+        guard let layouts else { finish(); return }
         let text: String
         let trailingSpace: Bool
         if !current.isEmpty {
@@ -344,13 +394,13 @@ final class Engine {
             trailingSpace = true
         } else {
             NSSound.beep()
-            busy = false
+            finish()
             return
         }
         let currentIsRu = KeyboardLayout.current()?.lang.hasPrefix("ru") ?? false
         let dir = direction(for: script(of: text)) ?? (currentIsRu ? .ruToEn : .enToRu)
         let fixed = layouts.convert(text, dir)
-        guard fixed != text else { NSSound.beep(); busy = false; return }
+        guard fixed != text else { NSSound.beep(); finish(); return }
         let n = text.count + (trailingSpace ? 1 : 0)
         let out = fixed + (trailingSpace ? " " : "")
         typingQueue.async { [self] in
@@ -364,7 +414,7 @@ final class Engine {
                 // Оставляем исправленное слово в буфере: повторное нажатие вернёт как было.
                 self.run = trailingSpace ? [Word(text: fixed, verdict: .unknown)] : []
                 self.current = trailingSpace ? "" : fixed
-                self.busy = false
+                self.finish()
             }
         }
     }
@@ -382,7 +432,7 @@ final class Engine {
     private func post(_ e: CGEvent) {
         e.setIntegerValueField(.eventSourceUserData, value: marker)
         e.post(tap: .cgSessionEventTap)
-        usleep(4_000)
+        usleep(2_000)
     }
 
     private func sendKey(_ code: CGKeyCode, flags: CGEventFlags = []) {
