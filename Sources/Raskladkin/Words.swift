@@ -1,7 +1,7 @@
 import AppKit
 
 enum Script { case latin, cyrillic, none }
-enum Verdict { case keep, convert, unknown, neutral }
+enum Verdict { case keep, convert, unknown, neutral, pending }
 
 func isCyrillic(_ c: Character) -> Bool {
     guard let v = c.unicodeScalars.first?.value else { return false }

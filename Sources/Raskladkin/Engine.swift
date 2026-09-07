@@ -58,6 +58,9 @@ final class Engine {
     private(set) var layouts: LayoutPair?
     private var speller: Speller?
     private var tap: CFMachPort?
+    private var mouseMonitor: Any?
+    private let verdictQueue = DispatchQueue(label: "raskladkin.verdict", qos: .userInitiated)
+    private var generation = 0     // растёт при каждом reset(): запоздавшие вердикты из прошлой серии игнорируются
     private let typingQueue = DispatchQueue(label: "raskladkin.typing")
     private var busy = false
 
@@ -81,9 +84,9 @@ final class Engine {
     @discardableResult
     func startTap() -> Bool {
         guard tap == nil else { return true }
+        // Только клавиатура. Мышь активным перехватчиком не трогаем: любая задержка в обработчике
+        // активного перехватчика замораживает и курсор, и клавиатуру на весь мак.
         let mask: CGEventMask = (1 << CGEventType.keyDown.rawValue)
-            | (1 << CGEventType.leftMouseDown.rawValue)
-            | (1 << CGEventType.rightMouseDown.rawValue)
         let refcon = Unmanaged.passUnretained(self).toOpaque()
         guard let tap = CGEvent.tapCreate(tap: .cgSessionEventTap, place: .headInsertEventTap,
                                           options: .defaultTap, eventsOfInterest: mask,
@@ -92,6 +95,9 @@ final class Engine {
         let source = CFMachPortCreateRunLoopSource(nil, tap, 0)
         CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
         CGEvent.tapEnable(tap: tap, enable: true)
+
+        // Клик мышью — конец серии слов. Пассивный монитор ничего не блокирует.
+        mouseMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in self?.reset() }
 
         NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
@@ -106,6 +112,7 @@ final class Engine {
     func reset() {
         run = []
         current = ""
+        generation += 1
     }
 
     /// Конец нашей перепечатки: отдаём приложению клавиши, которые пользователь успел нажать,
@@ -157,11 +164,15 @@ final class Engine {
     fileprivate func handle(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
         let pass = Unmanaged.passUnretained(event)
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
-            if let tap { CGEvent.tapEnable(tap: tap, enable: true) }
+            // Система выключила перехватчик (например, при переключении прав). Включаем обратно
+            // не мгновенно и не из обработчика: иначе при отозванных правах получается цикл.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                guard let self, let tap = self.tap, AXIsProcessTrusted() else { return }
+                CGEvent.tapEnable(tap: tap, enable: true)
+            }
             return pass
         }
         if event.getIntegerValueField(.eventSourceUserData) == marker { return pass }
-        if type == .leftMouseDown || type == .rightMouseDown { reset(); return pass }
         guard type == .keyDown else { return pass }
 
         let mode = Settings.mode
@@ -205,11 +216,8 @@ final class Engine {
         let s = String(utf16CodeUnits: chars, count: length)
 
         if s == " " {
-            if let words = finalizeWord(mode: mode) {
-                typingQueue.async { self.performAutoFix(words) }
-                return nil // пробел проглатываем: перепечатаем его сами
-            }
-            return pass
+            finalizeWord(mode: mode)
+            return pass // пробел всегда отдаём приложению; если понадобится, сотрём его вместе со словами
         }
         guard let scalar = s.unicodeScalars.first, scalar.value >= 0x20, scalar.value != 0x7F else {
             reset()
@@ -219,32 +227,47 @@ final class Engine {
         return pass
     }
 
-    /// Завершает текущее слово по пробелу. Возвращает серию слов, если пора чинить автоматом.
-    private func finalizeWord(mode: Mode) -> [Word]? {
-        guard !current.isEmpty else { return nil }
+    /// Завершает текущее слово по пробелу. Проверка по словарю идёт в фоне:
+    /// внутри обработчика событий ждать нельзя — это замораживает ввод на всём маке.
+    private func finalizeWord(mode: Mode) {
+        guard !current.isEmpty else { return }
         let word = current
         current = ""
-
         let autoAllowed = mode == .auto && !isExcludedApp() && !Bool(IsSecureEventInputEnabled())
         guard autoAllowed, let speller else {
             run.append(Word(text: word, verdict: .unknown))
             trimRun()
-            return nil
+            return
         }
-        let v = speller.verdict(word)
-        if v == .keep {
-            run = [Word(text: word, verdict: .keep)]
-        } else {
-            run.append(Word(text: word, verdict: v))
-        }
+        run.append(Word(text: word, verdict: .pending))
         trimRun()
+        let gen = generation
+        verdictQueue.async {
+            let v = speller.verdict(word)
+            DispatchQueue.main.async { self.applyVerdict(v, for: word, generation: gen) }
+        }
+    }
+
+    /// Вердикт пришёл из фона. Если серия с тех пор сброшена — он уже не нужен.
+    private func applyVerdict(_ v: Verdict, for word: String, generation gen: Int) {
+        guard gen == generation, !busy else { return }
+        guard let i = run.lastIndex(where: { $0.text == word && $0.verdict == .pending }) else { return }
+        if v == .keep {
+            // Настоящее слово текущей раскладки: всё, что было до него, серией не считается.
+            run.removeSubrange(0..<i)
+            run[0].verdict = .keep
+        } else {
+            run[i].verdict = v
+        }
         let wrong = run.filter { $0.verdict == .convert }.count
         lastEvent = "\(word) → \(v), серия \(wrong)/\(Settings.threshold)"
-        guard wrong >= Settings.threshold else { return nil }
-        let fix = Array(run.drop(while: { $0.verdict == .keep }))
+        guard wrong >= Settings.threshold, !run.contains(where: { $0.verdict == .pending }) else { return }
+        let words = Array(run.drop(while: { $0.verdict == .keep }))
+        let tail = current          // то, что пользователь успел набрать после последнего пробела
         run = []
+        current = ""
         busy = true
-        return fix
+        typingQueue.async { self.performAutoFix(words, tail: tail) }
     }
 
     private func trimRun() {
@@ -258,27 +281,31 @@ final class Engine {
 
     // MARK: - Auto fix
 
-    private func performAutoFix(_ words: [Word]) {
+    private func performAutoFix(_ words: [Word], tail: String) {
         guard let layouts else { DispatchQueue.main.async { self.finish() }; return }
-        let n = words.reduce(0) { $0 + $1.text.count } + max(0, words.count - 1)
+        // Стираем каждое слово вместе с пробелом после него плюс хвост, набранный после последнего пробела.
+        let n = words.reduce(0) { $0 + $1.text.count + 1 } + tail.count
         var votes: [Direction: Int] = [:]
         for w in words where w.verdict == .convert {
             if let d = direction(for: script(of: w.text)) { votes[d, default: 0] += 1 }
         }
         let majority = votes.max { $0.value < $1.value }?.key ?? .enToRu
-        let fixed = words.map { w -> String in
+        let fixedWords = words.map { w -> String in
             let d = direction(for: script(of: w.text)) ?? majority
             return layouts.convert(w.text, d)
-        }.joined(separator: " ")
+        }
+        let fixedTail = tail.isEmpty ? "" : layouts.convert(tail, direction(for: script(of: tail)) ?? majority)
+        let fixed = fixedWords.joined(separator: " ")
 
         waitForModifiersReleased()
         sendBackspaces(n)
-        typeText(fixed + " ")
+        typeText(fixed + " " + fixedTail)
         DispatchQueue.main.async {
             if Settings.switchLayout, let target = lang(for: script(of: fixed)) {
                 layouts.layout(for: target).select()
             }
             self.reset()
+            self.current = fixedTail
             self.finish()
         }
     }
@@ -357,8 +384,15 @@ final class Engine {
     }
 
     private func fixSelection(_ selection: String, saved: Snapshot?) {
-        guard let speller, let layouts else { finish(); return }
-        let (fixed, changed) = speller.fix(selection)
+        guard let speller else { finish(); return }
+        verdictQueue.async {
+            let (fixed, changed) = speller.fix(selection)
+            DispatchQueue.main.async { self.applySelectionFix(selection, fixed: fixed, changed: changed, saved: saved) }
+        }
+    }
+
+    private func applySelectionFix(_ selection: String, fixed: String, changed: Bool, saved: Snapshot?) {
+        guard let layouts else { finish(); return }
         guard changed else { NSSound.beep(); finish(); return }
         let pb = NSPasteboard.general
         let snap = saved ?? snapshot(pb)
