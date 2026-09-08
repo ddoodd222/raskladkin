@@ -55,7 +55,13 @@ tell application "Finder"
     set background picture of opts to file ".background:bg.tiff"
     set position of item "$APP_NAME.app" of container window to {170, 210}
     set position of item "Программы" of container window to {490, 210}
-    set position of item "Как установить.txt" of container window to {590, 330}
+    set position of item "Как установить.txt" of container window to {590, 300}
+    -- скрытые служебные элементы уводим за пределы окна: у части людей включён показ скрытых файлов
+    repeat with n in {".background", ".fseventsd", ".Trashes", ".DS_Store", ".VolumeIcon.icns"}
+      try
+        set position of item (n as string) of container window to {1200, 900}
+      end try
+    end repeat
     close
     open
     update without registering applications
