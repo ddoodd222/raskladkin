@@ -162,6 +162,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(access)
         menu.addItem(.separator())
 
+        let donate = NSMenuItem(title: "Поддержать проект…", action: #selector(openDonate), keyEquivalent: "")
+        donate.target = self
+        menu.addItem(donate)
+        menu.addItem(.separator())
+
         let quit = NSMenuItem(title: "Выйти", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         menu.addItem(quit)
     }
@@ -201,6 +206,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             if service.status == .enabled { try service.unregister() } else { try service.register() }
         } catch {
             NSSound.beep()
+        }
+    }
+    @objc private func openDonate() {
+        if let url = URL(string: "https://ddoodd222.github.io/raskladkin/#donate") {
+            NSWorkspace.shared.open(url)
         }
     }
     @objc private func openAccess() {

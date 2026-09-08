@@ -747,6 +747,7 @@ function buildDonate(){
   const open=()=>{last=document.activeElement;buildDonate();m.hidden=false;m.classList.add('open');c.focus();if(window.__lenis)window.__lenis.stop();document.body.style.overflow='hidden';};
   const close=()=>{m.classList.remove('open');m.hidden=true;if(window.__lenis)window.__lenis.start();document.body.style.overflow='';if(last)last.focus();};
   ['#donateBtn','#donateBtn2','#donateBtn3'].forEach(id=>{const b=$(id);if(b)b.onclick=open;});
+  if(location.hash==='#donate')setTimeout(open,500);   // приходят по ссылке из меню программы
   c.onclick=close;m.addEventListener('click',e=>{if(e.target===m)close();});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&m.classList.contains('open'))close();});
 })();
