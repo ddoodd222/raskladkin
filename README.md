@@ -2,7 +2,7 @@
 
 Чинит текст, набранный не в той раскладке (EN ↔ RU). Живёт в menubar.
 
-**[Скачать для macOS](https://github.com/ddoodd222/raskladkin/releases/latest/download/Raskladkin-1.0.dmg)** · [о программе](https://ddoodd222.github.io/raskladkin/) · бесплатно, macOS 13+
+**[Скачать для macOS](https://github.com/ddoodd222/raskladkin/releases/latest/download/Raskladkin.dmg)** · [о программе](https://ddoodd222.github.io/raskladkin/) · бесплатно, macOS 13+
 
 ## Что умеет
 - **Хоткей** (по умолчанию ⌘⇧A): чинит выделенный текст, а если ничего не выделено — последнее слово. Решает пословно через словари macOS, смешанный текст не ломает. Повторное нажатие на последнем слове возвращает как было.
