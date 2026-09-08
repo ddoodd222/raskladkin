@@ -54,7 +54,7 @@ tell application "Finder"
     set background picture of opts to file ".background:bg.tiff"
     set position of item "$APP_NAME.app" of container window to {170, 210}
     set position of item "Программы" of container window to {490, 210}
-    set position of item "Как установить.txt" of container window to {560, 340}
+    set position of item "Как установить.txt" of container window to {590, 330}
     close
     open
     update without registering applications
