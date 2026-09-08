@@ -1,0 +1,853 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Раскладкин — чинит текст не в той раскладке</title>
+<meta name="description" content="Бесплатная программа для Mac: набрал несколько слов не в той раскладке — она сама стирает их и печатает правильно. Выделил и нажал ⌘⇧A — починил. 2 МБ, без интернета.">
+<meta property="og:title" content="Раскладкин — чинит текст не в той раскладке">
+<meta property="og:description" content="Бесплатно для Mac. Печатай, не глядя на раскладку: ghbdtn → привет, сам.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="ru_RU">
+<meta name="theme-color" content="#FF47A8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23FF47A8'/%3E%3Cpath d='M32 6c2.4 16 11.6 25.2 26 26-14.4.8-23.6 10-26 26-2.4-16-11.6-25.2-26-26 14.4-.8 23.6-10 26-26z' fill='%23121212'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800;900&family=JetBrains+Mono:wght@400;700&display=swap">
+<script>document.documentElement.classList.add('js');if(matchMedia('(hover:none)').matches)document.documentElement.classList.add('touch');</script>
+<style>
+/* ===== Раскладкин · токены (этап 4) ===== */
+:root{
+  --paper:#F7F0DE; --ink:#121212; --pink:#FF47A8; --cobalt:#2A1FE6; --acid:#6CFF5E;
+  --paper-muted:#5A5548; --pink-muted:#3D0F2A; --ink-muted:#B8B2A3; --cobalt-muted:#D6D2FF;
+  --ink-a10:rgb(18 18 18 / .10); --ink-a30:rgb(18 18 18 / .30); --paper-a15:rgb(247 240 222 / .15);
+  --color-bg:var(--paper); --color-surface:var(--paper); --color-text:var(--ink); --color-text-muted:var(--paper-muted);
+  --color-border:var(--ink); --color-accent:var(--acid); --color-on-accent:var(--ink);
+  --color-focus-ring:var(--cobalt); --color-mark:var(--pink); --color-shadow:var(--ink);
+  --font-display:'Unbounded',system-ui,sans-serif; --font-text:'JetBrains Mono',ui-monospace,monospace;
+  --fs-caption:clamp(0.8rem,0.17vw + 0.76rem,0.89rem);
+  --fs-body:clamp(1rem,0.34vw + 0.91rem,1.125rem);
+  --fs-lead:clamp(1.25rem,0.61vw + 1.1rem,1.5rem);
+  --fs-h3:clamp(1.56rem,1vw + 1.31rem,2.11rem);
+  --fs-h2:clamp(1.95rem,1.56vw + 1.56rem,2.81rem);
+  --fs-h1:clamp(2.44rem,2.38vw + 1.85rem,3.75rem);
+  --fs-display:clamp(3.05rem,4vw + 1.9rem,5.5rem);
+  --lh-body:1.6; --lh-tight:1.15; --lh-display:0.95;
+  --ls-display:-0.02em; --ls-caps:0.08em;
+  --fw-regular:400; --fw-bold:700; --fw-heavy:800; --fw-black:900;
+  --space-3xs:clamp(0.25rem,0.2rem + 0.2vw,0.375rem); --space-2xs:clamp(0.5rem,0.45rem + 0.25vw,0.625rem);
+  --space-xs:clamp(0.75rem,0.68rem + 0.3vw,0.9375rem); --space-s:clamp(1rem,0.9rem + 0.4vw,1.25rem);
+  --space-m:clamp(1.5rem,1.35rem + 0.6vw,1.875rem); --space-l:clamp(2rem,1.8rem + 0.9vw,2.5rem);
+  --space-xl:clamp(3rem,2.7rem + 1.3vw,3.75rem); --space-2xl:clamp(4rem,3.6rem + 1.7vw,5rem);
+  --space-3xl:clamp(6rem,5.4rem + 2.6vw,7.5rem); --space-s-l:clamp(1rem,0.3rem + 3vw,2.5rem);
+  --space-section:var(--space-3xl); --space-stack:var(--space-m); --space-inline:var(--space-s); --gutter:var(--space-s-l);
+  --radius-none:0; --radius-s:4px; --radius-full:999px;
+  --border-w:3px; --border-thin:2px;
+  --shadow-hard:8px 8px 0 var(--color-shadow); --shadow-hard-s:4px 4px 0 var(--color-shadow); --shadow-hard-m:6px 6px 0 var(--color-shadow); --shadow-hard-l:10px 10px 0 var(--color-shadow); --shadow-print:4px 4px 0 var(--color-mark); --shadow-none:none;
+  --halftone:radial-gradient(circle at center, var(--color-border) 26%, transparent 30%);
+  --zigzag:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='12' viewBox='0 0 24 12'%3E%3Cpolyline points='0,12 6,0 12,12 18,0 24,12' fill='none' stroke='%236CFF5E' stroke-width='3'/%3E%3C/svg%3E");
+  --container:1200px; --container-narrow:65ch; --container-mid:820px;
+  --bp-s:480px; --bp-m:768px; --bp-l:1024px; --bp-xl:1280px;
+  --z-base:0; --z-sticky:100; --z-overlay:300; --z-modal:400;
+  --dur-fast:150ms; --dur-base:250ms; --dur-slow:450ms; --dur-morph:900ms;
+  --ease-out:cubic-bezier(0.22,1,0.36,1); --ease-in-out:cubic-bezier(0.65,0,0.35,1); --ease-snap:cubic-bezier(0.7,-0.4,0.3,1.4);
+  --grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --header-h:72px;
+}
+.s-pink{ --color-bg:var(--pink); --color-surface:var(--pink); --color-text:var(--ink); --color-text-muted:var(--pink-muted); --color-border:var(--ink); --color-focus-ring:var(--ink); --color-mark:var(--acid); background:var(--color-bg); color:var(--color-text); }
+.s-ink{ --color-bg:var(--ink); --color-surface:var(--ink); --color-text:var(--paper); --color-text-muted:var(--ink-muted); --color-border:var(--paper); --color-focus-ring:var(--acid); --color-mark:var(--acid); --color-shadow:var(--acid); background:var(--color-bg); color:var(--color-text); }
+.s-cobalt{ --color-bg:var(--cobalt); --color-surface:var(--cobalt); --color-text:var(--paper); --color-text-muted:var(--cobalt-muted); --color-border:var(--paper); --color-focus-ring:var(--acid); --color-mark:var(--acid); --color-shadow:var(--ink); background:var(--color-bg); color:var(--color-text); }
+.s-paper{ background:var(--color-bg); color:var(--color-text); }
+
+/* ===== база ===== */
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:auto;-webkit-text-size-adjust:100%}
+html.lenis{height:auto}
+.lenis.lenis-smooth{scroll-behavior:auto!important}
+body{margin:0;font-family:var(--font-text);font-size:var(--fs-body);line-height:var(--lh-body);font-weight:var(--fw-regular);background:var(--color-bg);color:var(--color-text);overflow-x:hidden}
+h1,h2,h3,p,ul,ol,figure,figcaption{margin:0}
+ul,ol{padding:0;list-style:none}
+a{color:inherit}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+svg{display:block}
+:focus-visible{outline:var(--border-w) solid var(--color-focus-ring);outline-offset:var(--space-3xs)}
+::selection{background:var(--acid);color:var(--ink)}
+.container{width:100%;max-width:var(--container);margin-inline:auto;padding-inline:var(--gutter)}
+.mid{max-width:var(--container-mid);margin-inline:auto}
+.narrow{max-width:var(--container-narrow);margin-inline:auto}
+.section{position:relative;padding-block:var(--space-section);overflow:hidden;scroll-margin-top:var(--header-h)}
+.section::before{content:"";position:absolute;inset:0;background-image:var(--grain);opacity:.3;mix-blend-mode:multiply;pointer-events:none}
+.s-ink::before,.s-cobalt::before{mix-blend-mode:soft-light;opacity:.55}
+.section::after{content:"";position:absolute;z-index:0;inset:auto 0 0 auto;width:38%;height:38%;background-image:var(--halftone);background-size:14px 14px;opacity:.14;pointer-events:none;-webkit-mask-image:radial-gradient(circle at 100% 100%,var(--ink) 0,transparent 70%);mask-image:radial-gradient(circle at 100% 100%,var(--ink) 0,transparent 70%)}
+.section>*{position:relative;z-index:1}
+.center{text-align:center}
+.center .display,.center .lead{margin-inline:auto}
+
+/* типографика */
+.eyebrow{font-family:var(--font-text);font-size:var(--fs-caption);font-weight:var(--fw-bold);letter-spacing:var(--ls-caps);text-transform:uppercase;display:inline-flex;align-items:center;gap:var(--space-2xs);color:var(--color-text)}
+.eyebrow::before{content:"✦";color:var(--color-mark)}
+.display{font-family:var(--font-display);font-weight:var(--fw-black);line-height:var(--lh-tight);letter-spacing:var(--ls-display);font-size:var(--fs-h2);margin-top:var(--space-s);max-width:22ch;text-wrap:balance;text-shadow:var(--shadow-print)}
+.display--display{font-size:var(--fs-display);line-height:var(--lh-display);max-width:none}
+@media (max-width:767px){.display--display{font-size:var(--fs-h1)}}
+@media (max-width:479px){.display--display{font-size:var(--fs-h2);overflow-wrap:anywhere}}
+.lead{font-size:var(--fs-lead);max-width:var(--container-narrow);margin-top:var(--space-m);text-wrap:pretty}
+.muted{color:var(--color-text-muted)}
+.h3{font-family:var(--font-display);font-weight:var(--fw-heavy);font-size:var(--fs-h3);line-height:var(--lh-tight);letter-spacing:var(--ls-display)}
+.h4{font-family:var(--font-display);font-weight:var(--fw-heavy);font-size:var(--fs-lead);line-height:var(--lh-tight);letter-spacing:var(--ls-display)}
+.w{display:inline-block;transform-origin:50% 80%;padding:0 var(--space-3xs);text-shadow:var(--shadow-print)}
+.w:nth-child(3n+1){rotate:-3deg}.w:nth-child(3n+2){rotate:2deg}.w:nth-child(3n){rotate:-1deg}
+
+/* кнопки, стикеры, кейкапы */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-2xs);min-height:56px;padding:var(--space-xs) var(--space-l);border:var(--border-w) solid var(--ink);border-radius:var(--radius-full);font-family:var(--font-display);font-weight:var(--fw-heavy);font-size:var(--fs-body);letter-spacing:0;text-decoration:none;background:var(--acid);color:var(--ink);box-shadow:var(--shadow-hard);transition:transform var(--dur-base) var(--ease-out),box-shadow var(--dur-base) var(--ease-out);will-change:transform;--color-shadow:var(--ink)}
+.btn:hover{transform:translate(-2px,-2px);box-shadow:var(--shadow-hard-l)}
+.btn:active{transform:translate(4px,4px);box-shadow:var(--shadow-none);transition-duration:var(--dur-fast)}
+.btn--ghost{background:var(--color-surface);color:var(--color-text);border-color:var(--color-border);box-shadow:var(--shadow-hard-s)}
+.btn--ghost:hover{box-shadow:var(--shadow-hard-m)}
+.btn--s{min-height:44px;padding:var(--space-2xs) var(--space-s);font-size:var(--fs-caption);box-shadow:var(--shadow-hard-s)}
+.btn--s:hover{box-shadow:var(--shadow-hard-m)}
+.btn__k{font-family:var(--font-text);font-weight:var(--fw-bold)}
+.btn__ico{width:1.15em;height:1.15em;flex:0 0 auto}
+.sticker{display:inline-flex;align-items:center;gap:var(--space-3xs);min-height:44px;padding:var(--space-2xs) var(--space-s);border:var(--border-w) solid var(--color-border);border-radius:var(--radius-full);font-family:var(--font-display);font-weight:var(--fw-heavy);font-size:var(--fs-caption);text-transform:uppercase;letter-spacing:var(--ls-caps);background:var(--color-surface);color:var(--color-text);transition:rotate var(--dur-slow) var(--ease-snap)}
+.sticker--solid{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.sticker--acid{background:var(--acid);color:var(--ink);border-color:var(--ink)}
+.sticker:hover{rotate:3deg}
+.sticker svg{width:14px;height:14px}
+.keycap{display:inline-flex;align-items:center;justify-content:center;min-width:64px;min-height:64px;padding:var(--space-2xs) var(--space-s);border:var(--border-w) solid var(--color-border);border-radius:var(--radius-s);background:var(--color-surface);color:var(--color-text);font-family:var(--font-display);font-weight:var(--fw-black);font-size:var(--fs-h3);box-shadow:var(--shadow-hard);transition:transform var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out),background var(--dur-fast) var(--ease-out)}
+.keycap--s{min-width:40px;min-height:40px;font-size:var(--fs-body);box-shadow:var(--shadow-hard-s);padding:var(--space-3xs) var(--space-2xs)}
+.keycap.is-down,.keycap:active{transform:translate(6px,6px);box-shadow:var(--shadow-none);background:var(--acid);color:var(--ink)}
+.keycap--s.is-down{transform:translate(3px,3px)}
+.keys{display:inline-flex;gap:var(--space-s);align-items:center}
+.keys__plus{font-family:var(--font-display);font-weight:var(--fw-black);font-size:var(--fs-h3)}
+
+/* звезда-морф */
+.star{position:absolute;pointer-events:none;color:var(--paper)}
+.star svg{width:100%;height:100%;overflow:visible}
+.star path{fill:currentColor;filter:url(#glow)}
+.hero__star path,.final__star path{filter:url(#rough)}
+.star-inline{display:inline-block;width:1em;height:1em;vertical-align:-0.12em;color:var(--acid)}
+
+/* экран-витрина */
+.screen{position:relative;border:var(--border-w) solid var(--ink);background:var(--ink);color:var(--paper);box-shadow:var(--shadow-hard);--color-shadow:var(--paper);font-family:var(--font-text);overflow:hidden;text-align:left}
+.screen__bar{display:flex;align-items:center;gap:var(--space-xs);padding:var(--space-xs) var(--space-s);border-bottom:var(--border-thin) solid var(--paper-a15);font-size:var(--fs-caption);color:var(--ink-muted)}
+.screen__dot{width:12px;height:12px;border-radius:var(--radius-full);background:var(--pink);flex:0 0 auto}
+.screen__badge{margin-left:auto;padding:var(--space-3xs) var(--space-2xs);border:var(--border-thin) solid var(--paper);border-radius:var(--radius-s);font-weight:var(--fw-bold);color:var(--paper);min-width:3.2em;text-align:center;transition:background var(--dur-fast),color var(--dur-fast)}
+.screen__badge.is-ru{background:var(--acid);color:var(--ink);border-color:var(--acid)}
+.screen__text{padding:var(--space-l) var(--space-s);font-size:var(--fs-h3);font-weight:var(--fw-bold);line-height:var(--lh-tight);min-height:4.4em;word-break:break-word}
+.screen__text .ch{display:inline-block;transition:transform var(--dur-base) var(--ease-in-out),color var(--dur-fast)}
+.screen__text .ch.is-flip{transform:rotateX(90deg)}
+.screen__text .ch.is-new{color:var(--acid)}
+.caret{display:inline-block;width:0.55em;height:1.05em;vertical-align:-0.15em;background:var(--acid);animation:blink 1s steps(2,start) infinite}
+@keyframes blink{to{visibility:hidden}}
+.screen__count{position:absolute;right:var(--space-s);bottom:var(--space-xs);font-size:var(--fs-caption);color:var(--ink-muted);display:inline-flex;gap:var(--space-3xs);align-items:center}
+.screen__count b{color:var(--acid);font-weight:var(--fw-bold)}
+.screen--paper{background:var(--paper);color:var(--ink);--color-shadow:var(--ink)}
+.screen--paper .screen__bar{color:var(--paper-muted);border-color:var(--ink-a10)}
+.screen--paper .screen__badge{border-color:var(--ink);color:var(--ink)}
+.screen--paper .screen__badge.is-ru{background:var(--acid);border-color:var(--ink)}
+.screen--paper .screen__count{color:var(--paper-muted)}
+.screen--paper .screen__count b{color:var(--cobalt)}
+.screen--paper .screen__text .ch.is-new{color:var(--cobalt)}
+.screen--s .screen__text{font-size:var(--fs-lead);min-height:3.2em;padding:var(--space-m) var(--space-s)}
+
+/* ===== шапка (закреплённая) ===== */
+.top{position:fixed;inset:0 0 auto 0;z-index:var(--z-sticky);min-height:var(--header-h);display:flex;flex-wrap:nowrap;align-items:center;justify-content:space-between;gap:var(--space-s);padding:var(--space-xs) var(--gutter);background:var(--pink);color:var(--ink);border-bottom:var(--border-w) solid transparent;transition:background var(--dur-base) var(--ease-out),color var(--dur-base) var(--ease-out),border-color var(--dur-base) var(--ease-out)}
+.top.is-scrolled{background:var(--ink);color:var(--paper);border-color:var(--acid)}
+.top__name{display:inline-flex;min-height:44px;align-items:baseline;gap:var(--space-2xs);font-family:var(--font-display);font-weight:var(--fw-black);font-size:var(--fs-lead);text-decoration:none;white-space:nowrap;min-width:0}
+.top__name small{font-family:var(--font-text);font-weight:var(--fw-regular);font-size:var(--fs-caption)}
+.top__actions{display:flex;align-items:center;gap:var(--space-xs);flex:0 0 auto}
+.top .sticker{rotate:-3deg;border-color:currentColor;background:transparent;color:inherit}
+.top.is-scrolled .sticker{background:transparent;color:var(--paper);border-color:var(--paper)}
+.top.is-scrolled .btn--s{--color-shadow:var(--paper)}
+.top .btn--s{display:none}
+@media (min-width:768px){.top .btn--s{display:inline-flex}}
+@media (max-width:479px){.top__name small{display:none}.top__name{font-size:var(--fs-body)}.top__txt{display:none}.top .sticker{min-width:44px;justify-content:center;padding-inline:var(--space-xs)}.top .sticker svg{width:18px;height:18px}}
+
+/* ===== hero ===== */
+.hero{min-height:100svh;display:grid;align-items:center;padding-top:calc(var(--header-h) + var(--space-xl))}
+.hero__inner{display:grid;gap:var(--space-2xl);justify-items:center}
+.hero__title{font-family:var(--font-display);font-weight:var(--fw-black);font-size:var(--fs-h1);line-height:var(--lh-display);letter-spacing:var(--ls-display);text-wrap:balance;max-width:14ch}
+.hero__stickers{display:flex;flex-wrap:wrap;justify-content:center;gap:var(--space-s);margin-bottom:var(--space-m)}
+.hero__stickers .sticker:nth-child(1){rotate:-8deg}.hero__stickers .sticker:nth-child(2){rotate:5deg}
+.hero__cta{display:flex;flex-direction:column;align-items:center;gap:var(--space-m);margin-top:var(--space-l)}
+.facts{display:flex;flex-wrap:wrap;justify-content:center;gap:var(--space-2xs) var(--space-s);font-size:var(--fs-caption);font-weight:var(--fw-bold);text-transform:uppercase;letter-spacing:var(--ls-caps)}
+.facts li+li::before{content:"✦";margin-right:var(--space-s);color:var(--color-mark)}
+.hero__mobile{display:none;margin-top:var(--space-2xs);font-size:var(--fs-caption)}
+.hero__star{width:min(70vw,560px);aspect-ratio:1;top:6%;right:-16%;z-index:0;opacity:.95;color:var(--acid)}
+.hero__stage{position:relative;z-index:1;width:100%;max-width:560px}
+.hero__stage .screen{rotate:1.5deg}
+@media (max-width:767px){.hero__mobile{display:block}}
+@media (max-width:479px){.hero__title{font-size:var(--fs-h2);overflow-wrap:anywhere}}
+@media (min-width:1024px){.hero__star{top:-4%;right:-6%}.hero__title{font-size:var(--fs-display)}}
+
+/* ===== бегущая строка ===== */
+.ticker{padding-block:var(--space-2xl)}
+.ticker .container{margin-bottom:var(--space-m)}
+.marquee{overflow:hidden;border-block:var(--border-w) solid var(--paper);padding-block:var(--space-m)}
+.marquee__track{display:flex;gap:var(--space-l);width:max-content;animation:scroll 48s linear infinite}
+.marquee__set{display:flex;gap:var(--space-l);align-items:flex-end}
+.marquee:hover .marquee__track{animation-play-state:paused}
+.bubble{position:relative;display:inline-flex;flex-direction:column;gap:var(--space-3xs);padding:var(--space-xs) var(--space-s);border:var(--border-w) solid var(--paper);border-radius:var(--radius-s);background:var(--paper);color:var(--ink);font-family:var(--font-text);font-weight:var(--fw-bold);font-size:var(--fs-lead);line-height:var(--lh-tight);white-space:nowrap;box-shadow:var(--shadow-hard-s);--color-shadow:var(--acid)}
+.bubble--out{background:var(--acid);border-color:var(--acid);translate:0 -0.6em;--color-shadow:var(--paper)}
+.bubble__m{font-size:var(--fs-caption);font-weight:var(--fw-regular);color:var(--paper-muted);align-self:flex-end}
+.bubble::before{content:"";position:absolute;bottom:calc(-1 * var(--border-w));left:-13px;width:14px;height:14px;background:var(--paper);clip-path:polygon(100% 0,100% 100%,0 100%)}
+.bubble--in{border-bottom-left-radius:0}
+.bubble--out{border-bottom-right-radius:0}
+.bubble--out::before{left:auto;right:-13px;background:var(--acid);clip-path:polygon(0 0,0 100%,100% 100%)}
+@keyframes scroll{to{transform:translateX(-50%)}}
+.zigzag{height:var(--space-s);background-image:var(--zigzag);background-repeat:repeat-x;background-position:center;margin-top:var(--space-m)}
+
+/* ===== как работает ===== */
+.steps{display:grid;grid-template-columns:1fr;gap:var(--space-xl);margin-top:var(--space-2xl);text-align:left}
+.step{display:grid;gap:var(--space-s);align-content:start}
+.step__n{display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;background:var(--pink);color:var(--ink);font-family:var(--font-display);font-weight:var(--fw-black);font-size:var(--fs-lead);border:var(--border-w) solid var(--ink);box-shadow:var(--shadow-hard-s);rotate:-4deg}
+.step:nth-child(2n) .step__n{rotate:4deg}
+.step p{text-wrap:pretty}
+.step .screen{margin-top:var(--space-xs)}
+@media (min-width:1024px){.steps{grid-template-columns:repeat(3,1fr);gap:var(--space-l)}}
+
+/* ===== хоткей ===== */
+.hot__grid{display:grid;grid-template-columns:1fr;gap:var(--space-xl);margin-top:var(--space-2xl);text-align:left;align-items:start}
+.hot__keys{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-s);margin-bottom:var(--space-l)}
+.sample{position:relative;border:var(--border-w) solid var(--ink);background:var(--paper);color:var(--ink);box-shadow:var(--shadow-hard);--color-shadow:var(--ink);padding:var(--space-l) var(--space-m);font-size:var(--fs-h3);font-weight:var(--fw-bold);line-height:var(--lh-tight);rotate:-1deg}
+.sample .ch{display:inline-block;transition:transform var(--dur-base) var(--ease-in-out),color var(--dur-fast)}
+.sample .ch.is-flip{transform:rotateX(90deg)}
+.sample .ch.is-new{color:var(--cobalt)}
+.sample__hint{display:block;margin-top:var(--space-s);font-size:var(--fs-body);font-weight:var(--fw-regular);color:var(--paper-muted)}
+.hot__act{display:flex;flex-wrap:wrap;gap:var(--space-s);align-items:center;margin-top:var(--space-l)}
+.hot__try{font-size:var(--fs-caption);font-weight:var(--fw-bold);text-transform:uppercase;letter-spacing:var(--ls-caps);margin-bottom:var(--space-s)}
+.hot__star{width:220px;aspect-ratio:1;right:-40px;bottom:-40px;color:var(--acid);opacity:.9}
+.hot__star2{width:120px;aspect-ratio:1;left:-70px;top:-50px;color:var(--acid)}
+.hot__mobile{display:none}
+html.touch .hot__desktop{display:none}
+html.touch .hot__mobile{display:block}
+.beforeafter{display:grid;gap:var(--space-s)}
+.beforeafter .arrow{font-family:var(--font-display);font-weight:var(--fw-black);font-size:var(--fs-h3);color:var(--acid);text-align:center}
+@media (min-width:1024px){.hot__grid{grid-template-columns:1fr 1fr;gap:var(--space-2xl)}}
+
+/* ===== тур-лист ===== */
+.tour{margin-top:var(--space-2xl);border-top:var(--border-thin) solid var(--color-border);text-align:left}
+.tour li{display:grid;grid-template-columns:1fr;gap:var(--space-2xs);padding-block:var(--space-m);border-bottom:var(--border-thin) solid var(--color-border);align-items:baseline}
+.tour__label{font-family:var(--font-display);font-weight:var(--fw-heavy);font-size:var(--fs-lead);letter-spacing:var(--ls-display);display:flex;align-items:baseline;gap:var(--space-s);transition:transform var(--dur-base) var(--ease-out)}
+.tour li:hover .tour__label{transform:translateX(4px)}
+.tour__text{max-width:var(--container-narrow);text-wrap:pretty}
+.tour__text a{text-decoration-thickness:var(--border-thin);text-underline-offset:0.2em}
+.tour__ico{width:32px;height:32px;color:var(--color-text);flex:0 0 auto;translate:0 0.25em}
+.s-ink .tour__ico,.s-cobalt .tour__ico{color:var(--acid)}
+.hot .tour{margin-top:0}
+.hot .tour li{grid-template-columns:1fr}
+@media (min-width:768px){.tour li{grid-template-columns:minmax(14ch,1fr) 2.2fr;gap:var(--space-l)}}
+
+/* ===== мелочи ===== */
+.notes{padding-block:var(--space-2xl)}
+.notes__grid{display:grid;grid-template-columns:1fr;gap:var(--space-s);margin-top:var(--space-l);text-align:left}
+.note{display:flex;gap:var(--space-s);align-items:flex-start;padding:var(--space-s) var(--space-m);border:var(--border-thin) solid var(--color-border);font-size:var(--fs-body);text-wrap:pretty}
+.note::before{content:"✦";color:var(--acid);flex:0 0 auto}
+@media (min-width:768px){.notes__grid{grid-template-columns:1fr 1fr}}
+
+/* ===== установка ===== */
+.install__list{display:grid;gap:var(--space-2xl);margin-top:var(--space-2xl);text-align:left}
+.istep{display:grid;grid-template-columns:1fr;gap:var(--space-l);align-items:center}
+.istep__body{display:grid;grid-template-columns:auto 1fr;gap:var(--space-m);align-items:start}
+.istep__body p{text-wrap:pretty}
+.istep__n{display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;background:var(--pink);color:var(--ink);font-family:var(--font-display);font-weight:var(--fw-black);font-size:var(--fs-lead);border:var(--border-w) solid var(--ink);box-shadow:var(--shadow-hard-s);rotate:-4deg;flex:0 0 auto}
+.istep:nth-child(2n) .istep__n{rotate:4deg}
+.sketch{position:relative;width:100%;max-width:440px;margin-inline:auto;color:var(--ink)}
+.sketch__frame{position:absolute;inset:0;width:100%;height:100%}
+.sketch__body{position:relative;padding:var(--space-m)}
+.sketch__title{display:block;font-family:var(--font-display);font-weight:var(--fw-heavy);font-size:var(--fs-body)}
+.sketch__p{margin-top:var(--space-2xs);font-size:var(--fs-caption);color:var(--paper-muted)}
+.sketch__btns{display:flex;flex-wrap:wrap;gap:var(--space-2xs);margin-top:var(--space-s);font-size:var(--fs-caption)}
+.sketch__btn{padding:var(--space-3xs) var(--space-xs);border:var(--border-thin) solid var(--ink);border-radius:var(--radius-s)}
+.sketch__btn--go{background:var(--acid);font-weight:var(--fw-bold)}
+.sketch__hint{position:relative;display:flex;align-items:center;justify-content:flex-start;gap:var(--space-2xs);margin-top:var(--space-2xs);padding-left:var(--space-2xl);font-family:var(--font-display);font-weight:var(--fw-heavy);font-size:var(--fs-caption);text-transform:uppercase;letter-spacing:var(--ls-caps);color:var(--cobalt)}
+.sketch__hint svg{width:40px;height:40px}
+.sketch__row{display:flex;align-items:center;justify-content:center;gap:var(--space-l);padding:var(--space-s)}
+.sketch__tile{display:grid;justify-items:center;gap:var(--space-2xs);font-size:var(--fs-caption);font-weight:var(--fw-bold)}
+.sketch__tile svg{width:72px;height:72px}
+.sketch__drag{width:64px;height:32px;color:var(--cobalt)}
+.sketch__toggle{display:flex;align-items:center;justify-content:space-between;gap:var(--space-s);padding:var(--space-xs) 0;border-top:var(--border-thin) solid var(--ink-a10)}
+.sketch__toggle span{display:inline-flex;align-items:center;gap:var(--space-2xs);font-size:var(--fs-caption);font-weight:var(--fw-bold)}
+.sketch__toggle svg{width:20px;height:20px}
+.sw{width:44px;height:26px;border:var(--border-thin) solid var(--ink);border-radius:var(--radius-full);position:relative;flex:0 0 auto}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:var(--radius-full);background:var(--ink)}
+.sw--on{background:var(--acid)}
+.sw--on::after{left:auto;right:2px}
+.sketch__menubar{display:flex;align-items:center;justify-content:flex-end;gap:var(--space-s);padding:var(--space-2xs) var(--space-s);background:var(--ink);color:var(--paper);font-size:var(--fs-caption)}
+.sketch__menubar svg{width:22px;height:22px;color:var(--acid)}
+.sketch__menu{margin:var(--space-2xs) var(--space-s) 0 auto;width:min(100%,260px);border:var(--border-thin) solid var(--ink);background:var(--paper);font-size:var(--fs-caption);padding:var(--space-2xs) 0}
+.sketch__menu li{padding:var(--space-3xs) var(--space-s)}
+.sketch__menu li.is-on{background:var(--acid);font-weight:var(--fw-bold)}
+.install__cta{display:flex;justify-content:center;margin-top:var(--space-2xl)}
+@media (min-width:1024px){.istep{grid-template-columns:1.1fr .9fr;gap:var(--space-2xl)}.istep:nth-child(2n) .istep__body{order:2}}
+
+/* ===== финал + поддержать ===== */
+.final__star{width:min(90vw,760px);aspect-ratio:1;left:50%;top:50%;translate:-50% -50%;opacity:.55}
+.final__cta{display:flex;flex-direction:column;align-items:center;gap:var(--space-m);margin-top:var(--space-l)}
+.final__note{font-size:var(--fs-caption);font-weight:var(--fw-bold);text-transform:uppercase;letter-spacing:var(--ls-caps)}
+.donate{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-l);margin-top:var(--space-2xl);padding:var(--space-l);border:var(--border-w) solid var(--ink);background:var(--ink);color:var(--paper);box-shadow:var(--shadow-hard);--color-shadow:var(--acid);rotate:-1deg;text-align:left}
+.donate .btn--ghost{--color-shadow:var(--paper)}
+.donate__heart{width:56px;height:56px;color:var(--acid);flex:0 0 auto;rotate:-8deg}
+.donate__tx{flex:1;min-width:16rem}
+.donate__tx b{display:block;font-family:var(--font-display);font-weight:var(--fw-heavy);font-size:var(--fs-lead)}
+.donate__tx span{display:block;margin-top:var(--space-3xs);color:var(--ink-muted)}
+
+/* ===== футер ===== */
+.foot{padding-block:0 var(--space-xl)}
+.foot .zigzag{margin:0 0 var(--space-xl)}
+.foot .container{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:var(--space-s) var(--space-m);font-size:var(--fs-caption)}
+.foot .keys{gap:var(--space-3xs)}
+.foot a{text-underline-offset:0.2em;display:inline-flex;align-items:center;min-height:44px}
+
+/* ===== sticky CTA (мобайл) ===== */
+.sticky-cta{position:fixed;left:var(--gutter);right:var(--gutter);bottom:var(--space-s);z-index:var(--z-sticky);display:none;transform:translateY(200%);transition:transform var(--dur-slow) var(--ease-out)}
+.sticky-cta.is-on{transform:translateY(0)}
+@media (max-width:767px){.sticky-cta{display:inline-flex}}
+
+/* ===== модалка ===== */
+.modal-bg{position:fixed;inset:0;z-index:var(--z-modal);background:var(--ink-a30);display:none;align-items:center;justify-content:center;padding:var(--gutter)}
+.modal-bg.open{display:flex}
+.modal{position:relative;width:100%;max-width:460px;max-height:88svh;overflow-y:auto;background:var(--paper);color:var(--ink);border:var(--border-w) solid var(--ink);box-shadow:var(--shadow-hard);--color-shadow:var(--ink);padding:var(--space-l);text-align:left}
+.modal h3{font-family:var(--font-display);font-weight:var(--fw-heavy);font-size:var(--fs-h3);margin-top:var(--space-s)}
+.modal .msub{margin-top:var(--space-xs);color:var(--paper-muted)}
+.mheart{width:48px;height:48px;color:var(--pink)}
+.mclose{position:absolute;top:var(--space-s);right:var(--space-s);width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center;border:var(--border-thin) solid var(--ink);background:var(--paper)}
+.mclose:hover{background:var(--acid)}
+.dopt{display:flex;align-items:center;gap:var(--space-xs);width:100%;padding:var(--space-xs);margin-top:var(--space-xs);border:var(--border-thin) solid var(--ink);background:var(--paper);color:var(--ink);text-decoration:none;text-align:left;transition:transform var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out)}
+.dopt:hover{transform:translate(-2px,-2px);box-shadow:var(--shadow-hard-s)}
+.dopt .dic{width:34px;height:34px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;font-weight:var(--fw-bold);border:var(--border-thin) solid var(--ink);border-radius:var(--radius-full)}
+.dopt .dic.coin{border:0}
+.dopt .dic svg{width:34px;height:34px;border-radius:var(--radius-full)}
+.dopt .dtx{flex:1;min-width:0}
+.dopt .dt{display:block;font-weight:var(--fw-bold)}
+.dopt .ds{display:block;font-size:var(--fs-caption);color:var(--paper-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dopt .darr{flex:0 0 auto;font-size:var(--fs-caption);font-weight:var(--fw-bold)}
+.dopt.copied{border-color:var(--cobalt)}.dopt.copied .darr{color:var(--cobalt)}
+.mnote{margin-top:var(--space-s);font-size:var(--fs-caption);color:var(--paper-muted)}
+
+/* ===== reveal (только с JS, тихий) ===== */
+html.js [data-reveal]{opacity:0}
+html.js.reduce [data-reveal]{opacity:1}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+  html.js [data-reveal]{opacity:1}
+  .marquee__track{animation:none}
+}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="rough" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="3" seed="4" result="t"/><feDisplacementMap in="SourceGraphic" in2="t" scale="9" xChannelSelector="R" yChannelSelector="G" result="d"/><feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves="2" seed="9" result="n"/><feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -1.6 1.15" result="grainA"/><feComposite in="grainA" in2="d" operator="in" result="g"/><feBlend in="d" in2="g" mode="multiply"/></filter>
+    <filter id="wobble"><feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="2" seed="7" result="t"/><feDisplacementMap in="SourceGraphic" in2="t" scale="5" xChannelSelector="R" yChannelSelector="G"/></filter>
+    <path id="p-star" d="M100,0 C108,60 140,92 200,100 C140,108 108,140 100,200 C92,140 60,108 0,100 C60,92 92,60 100,0 Z"/>
+    <path id="p-blob" d="M104,10 C158,-4 206,44 186,98 C172,136 154,198 96,188 C44,180 2,152 18,96 C30,50 56,22 104,10 Z"/>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path fill="currentColor" d="M12 21s-7.5-4.6-10-9.3C.4 8.5 2 5 5.3 5c2 0 3.4 1.1 4.2 2.4L12 10l2.5-2.6C15.3 6.1 16.7 5 18.7 5 22 5 23.6 8.5 22 11.7 19.5 16.4 12 21 12 21z"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M6 10l6 6 6-6"/><path d="M4 20h16"/></g></symbol>
+    <symbol id="i-keyboard" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h1M10 10h1M14 10h1M18 10h1M6 14h1M9 14h6M18 14h1"/></g></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="1"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></g><circle cx="12" cy="15.5" r="1.4" fill="currentColor"/></symbol>
+    <symbol id="i-net" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/><path d="M4 4l16 16"/></g></symbol>
+    <symbol id="i-code" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7l-5 5 5 5M15 7l5 5-5 5"/></g></symbol>
+    <symbol id="i-term" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M12 15h5"/></g></symbol>
+    <symbol id="i-three" viewBox="0 0 24 24"><circle cx="5" cy="12" r="3" fill="currentColor"/><circle cx="12" cy="12" r="3" fill="currentColor"/><circle cx="19" cy="12" r="3" fill="currentColor"/></symbol>
+    <symbol id="i-switch" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="10" rx="5"/></g><circle cx="16" cy="12" r="3" fill="currentColor"/></symbol>
+    <symbol id="i-feather" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 4c-6 0-11 3-13 9l-3 7 7-3c6-2 9-7 9-13z"/><path d="M4 20L14 10"/></g></symbol>
+    <symbol id="i-select" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h10M4 18h7"/><path d="M15 15l5 2-2 1-1 2z" fill="currentColor"/></g></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2c.6 5 3.4 7.8 8.4 8.4-5 .6-7.8 3.4-8.4 8.4-.6-5-3.4-7.8-8.4-8.4 5-.6 7.8-3.4 8.4-8.4z"/></symbol>
+    <symbol id="i-cursor" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v16M8 4h8M8 20h8"/></g></symbol>
+    <symbol id="i-undo" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14l-4-4 4-4"/><path d="M5 10h9a5 5 0 0 1 0 10h-2"/></g></symbol>
+    <symbol id="i-folder" viewBox="0 0 64 64"><path d="M6 14h18l6 6h28v30H6z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><path d="M6 26h52" stroke="currentColor" stroke-width="3"/></symbol>
+    <symbol id="i-app" viewBox="0 0 64 64"><rect x="6" y="6" width="52" height="52" rx="10" fill="#FF47A8" stroke="currentColor" stroke-width="3"/><path d="M32 14c2 12 9 19 20 20-11 1-18 8-20 20-2-12-9-19-20-20 11-1 18-8 20-20z" fill="currentColor"/></symbol>
+  </defs>
+</svg>
+
+<header class="top" id="topbar">
+  <a class="top__name" href="#top">Раскладкин <small>v1.0 · для Mac</small></a>
+  <div class="top__actions">
+    <a class="btn btn--s" href="https://github.com/ddoodd222/raskladkin/releases/latest/download/Raskladkin-1.0.dmg" download><svg class="btn__ico" aria-hidden="true"><use href="#i-down"/></svg>Скачать</a>
+    <button class="sticker" id="donateBtn" aria-haspopup="dialog" aria-label="Поддержать"><svg aria-hidden="true"><use href="#i-heart"/></svg><span class="top__txt">Поддержать</span></button>
+  </div>
+</header>
+
+<main id="top">
+
+<!-- 1. HERO -->
+<section class="section s-pink hero center" aria-labelledby="h1">
+  <div class="star hero__star" data-star="hero"><svg viewBox="0 0 200 200"><use href="#p-star"/></svg></div>
+  <div class="container hero__inner">
+    <div class="hero__copy">
+      <div class="hero__stickers" data-stamp>
+        <span class="sticker">Бесплатно</span>
+        <span class="sticker sticker--solid">для Mac</span>
+      </div>
+      <h1 class="hero__title" id="h1"><span class="w">Печатай,</span> <span class="w">не</span> <span class="w">глядя</span> <span class="w">на</span> <span class="w">раскладку</span></h1>
+      <p class="lead" data-reveal>Набрал абракадабру не в той раскладке — Раскладкин сам сотрет и напечатает правильно.</p>
+      <div class="hero__cta" data-stamp>
+        <a class="btn" href="https://github.com/ddoodd222/raskladkin/releases/latest/download/Raskladkin-1.0.dmg" download data-magnet><svg class="btn__ico" aria-hidden="true"><use href="#i-down"/></svg>Скачать Раскладкин</a>
+        <ul class="facts" aria-label="Факты"><li>2 МБ</li><li>macOS 13+</li><li>без интернета</li><li>исходники открыты</li></ul>
+      </div>
+      <p class="hero__mobile muted">Нужен Mac — пришли себе ссылку</p>
+    </div>
+    <div class="hero__stage" data-reveal>
+      <div class="screen" aria-label="Демонстрация: текст чинится сам">
+        <div class="screen__bar"><span class="screen__dot"></span><span>Telegram · Друг</span><span class="screen__badge" data-badge="hero">EN</span></div>
+        <div class="screen__text"><span data-typed="hero">привет как дела</span><span class="caret" aria-hidden="true"></span></div>
+        <div class="screen__count" aria-hidden="true"><b>✦</b> <span data-count="hero">3/3</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 2. ЗНАКОМО -->
+<section class="section s-ink ticker center" aria-labelledby="h-ticker">
+  <div class="container">
+    <h2 class="eyebrow" id="h-ticker">Знакомо?</h2>
+    <p class="display" data-split>Так выглядит чат после английской раскладки</p>
+  </div>
+  <div class="marquee" aria-label="Примеры текста не в той раскладке">
+    <div class="marquee__track">
+      <span class="marquee__set"><span class="bubble bubble--in"><span class="bubble__t">Ghbdtn^ rfr ltkf&</span><span class="bubble__m">12:41</span></span><span class="bubble bubble--out"><span class="bubble__t">Cvjnhb^ xnj yfitk</span><span class="bubble__m">12:41 ✓✓</span></span><span class="bubble bubble--in"><span class="bubble__t">Z ctujlyz yt vjue</span><span class="bubble__m">12:42</span></span><span class="bubble bubble--out"><span class="bubble__t">Gjt[fkb&</span><span class="bubble__m">12:42 ✓✓</span></span><span class="bubble bubble--in"><span class="bubble__t">Ytn^ z ghj lheujt</span><span class="bubble__m">12:43</span></span><span class="bubble bubble--out"><span class="bubble__t">Cgfcb,j&&&</span><span class="bubble__m">12:43 ✓✓</span></span><span class="bubble bubble--in"><span class="bubble__t">Руддщ куттш</span><span class="bubble__m">12:44</span></span><span class="bubble bubble--out"><span class="bubble__t">Дуеы пщ</span><span class="bubble__m">12:44 ✓✓</span></span><span class="bubble bubble--in"><span class="bubble__t">Ыуу нщг ещьщккщц</span><span class="bubble__m">12:45</span></span></span>
+      <span class="marquee__set" aria-hidden="true"><span class="bubble bubble--in"><span class="bubble__t">Ghbdtn^ rfr ltkf&</span><span class="bubble__m">12:41</span></span><span class="bubble bubble--out"><span class="bubble__t">Cvjnhb^ xnj yfitk</span><span class="bubble__m">12:41 ✓✓</span></span><span class="bubble bubble--in"><span class="bubble__t">Z ctujlyz yt vjue</span><span class="bubble__m">12:42</span></span><span class="bubble bubble--out"><span class="bubble__t">Gjt[fkb&</span><span class="bubble__m">12:42 ✓✓</span></span><span class="bubble bubble--in"><span class="bubble__t">Ytn^ z ghj lheujt</span><span class="bubble__m">12:43</span></span><span class="bubble bubble--out"><span class="bubble__t">Cgfcb,j&&&</span><span class="bubble__m">12:43 ✓✓</span></span><span class="bubble bubble--in"><span class="bubble__t">Руддщ куттш</span><span class="bubble__m">12:44</span></span><span class="bubble bubble--out"><span class="bubble__t">Дуеы пщ</span><span class="bubble__m">12:44 ✓✓</span></span><span class="bubble bubble--in"><span class="bubble__t">Ыуу нщг ещьщккщц</span><span class="bubble__m">12:45</span></span></span>
+    </div>
+  </div>
+  <div class="zigzag" aria-hidden="true"></div>
+</section>
+
+<!-- 3. КАК РАБОТАЕТ -->
+<section class="section s-paper how center" id="how" aria-labelledby="h-how">
+  <div class="container">
+    <h2 class="eyebrow" id="h-how">Как работает</h2>
+    <p class="display" data-split>Замечает ошибку и сам печатает заново</p>
+    <p class="lead" data-reveal>Следит за тем, что ты набираешь. Три слова подряд не в той раскладке — ошибка, чинит сам.</p>
+    <ol class="steps">
+      <li class="step" data-reveal>
+        <span class="step__n" aria-hidden="true">01</span>
+        <h3 class="h4">Ты печатаешь как обычно</h3>
+        <p>Первое странное слово он пропускает: это может быть ник, код или название. Ничего не происходит.</p>
+        <div class="screen screen--paper screen--s" aria-hidden="true"><div class="screen__bar"><span class="screen__dot"></span><span>Сообщение</span><span class="screen__badge">EN</span></div><div class="screen__text">ghbdtn<span class="caret"></span></div><div class="screen__count"><b>✦</b> 1/3</div></div>
+      </li>
+      <li class="step" data-reveal>
+        <span class="step__n" aria-hidden="true">02</span>
+        <h3 class="h4">Третье слово подряд</h3>
+        <p>Три таких слова подряд — точно не ник. Как только ты ставишь пробел после третьего, он начинает исправлять.</p>
+        <div class="screen screen--paper screen--s" aria-hidden="true"><div class="screen__bar"><span class="screen__dot"></span><span>Сообщение</span><span class="screen__badge">EN</span></div><div class="screen__text">ghbdtn rfr ltkf<span class="caret"></span></div><div class="screen__count"><b>✦</b> 3/3</div></div>
+      </li>
+      <li class="step" data-reveal>
+        <span class="step__n" aria-hidden="true">03</span>
+        <h3 class="h4">Стирает и печатает заново</h3>
+        <p>Абракадабра стирается, на ее месте появляется правильный текст, раскладка переключается на русскую. Дальше печатаешь как ни в чем не бывало.</p>
+        <div class="screen screen--paper screen--s" aria-hidden="true"><div class="screen__bar"><span class="screen__dot"></span><span>Сообщение</span><span class="screen__badge is-ru">RU</span></div><div class="screen__text">привет как дела<span class="caret"></span></div><div class="screen__count"><b>✦</b> готово</div></div>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<!-- 4. ХОТКЕЙ -->
+<section class="section s-cobalt hot center" id="hotkey" aria-labelledby="h-hot">
+  <div class="star hot__star" data-star="hot"><svg viewBox="0 0 200 200"><use href="#p-star"/></svg></div>
+  <div class="star hot__star2" data-star="hot2"><svg viewBox="0 0 200 200"><use href="#p-blob"/></svg></div>
+  <div class="container">
+    <h2 class="eyebrow" id="h-hot">Хоткей</h2>
+    <p class="display" data-split>Выдели абракадабру, нажми ⌘⇧A — станет текстом</p>
+    <p class="lead" data-reveal>Когда автомат не успел или текст старый. В любом приложении.</p>
+    <div class="hot__grid">
+      <div>
+        <ul class="tour">
+          <li data-reveal><span class="tour__label"><svg class="tour__ico" aria-hidden="true"><use href="#i-select"/></svg>Что сделать</span><span class="tour__text">Выдели неправильный кусок текста и нажми ⌘⇧A.</span></li>
+          <li data-reveal><span class="tour__label"><svg class="tour__ico" aria-hidden="true"><use href="#i-spark"/></svg>Что произойдет</span><span class="tour__text">Выделенное переведется в другую раскладку: ghbdtn станет привет. Английские слова внутри останутся английскими.</span></li>
+          <li data-reveal><span class="tour__label"><svg class="tour__ico" aria-hidden="true"><use href="#i-cursor"/></svg>Ничего не выделил</span><span class="tour__text">Исправится слово, которое ты только что напечатал.</span></li>
+          <li data-reveal><span class="tour__label"><svg class="tour__ico" aria-hidden="true"><use href="#i-undo"/></svg>Передумал</span><span class="tour__text">Нажми ⌘⇧A еще раз — текст вернется как был.</span></li>
+        </ul>
+      </div>
+      <div>
+        <div class="hot__keys" aria-hidden="true"><span class="keys"><span class="keycap" data-key="Meta">⌘</span><span class="keys__plus">+</span><span class="keycap" data-key="Shift">⇧</span><span class="keys__plus">+</span><span class="keycap" data-key="KeyA">A</span></span></div>
+        <div class="hot__desktop">
+          <p class="hot__try">Попробуй прямо здесь</p>
+          <div class="sample" id="sample" tabindex="0" aria-label="Тренажер: образец текста для починки">
+            <p data-sample>Ghbdtn^ rfr ltkf& Z d Figma</p>
+            <span class="sample__hint">Выдели часть текста или весь и нажми ⌘⇧A на клавиатуре. Или кнопку ниже.</span>
+          </div>
+          <div class="hot__act"><button class="btn btn--ghost" id="fixBtn" type="button">Нажать <span class="btn__k">⌘⇧A</span></button><span class="sr-only" id="fixStatus" aria-live="polite"></span></div>
+        </div>
+        <div class="hot__mobile">
+          <p class="hot__try">С телефона не попробовать. На маке это выглядит так</p>
+          <div class="beforeafter" aria-label="До и после">
+            <div class="screen screen--paper screen--s"><div class="screen__bar"><span class="screen__dot"></span><span>Выделил</span></div><div class="screen__text">Ghbdtn^ rfr ltkf& Z d Figma</div></div>
+            <div class="arrow" aria-hidden="true">⌘⇧A ↓</div>
+            <div class="screen screen--paper screen--s"><div class="screen__bar"><span class="screen__dot"></span><span>Нажал</span><span class="screen__badge is-ru">RU</span></div><div class="screen__text">Привет, как дела. Я в Figma</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5. БЕЗОПАСНОСТЬ -->
+<section class="section s-ink safe center" id="safe" aria-labelledby="h-safe">
+  <div class="container mid">
+    <h2 class="eyebrow" id="h-safe">Безопасность</h2>
+    <p class="display" data-split>Не видит пароли, не ходит в интернет</p>
+    <ul class="tour">
+      <li data-reveal><span class="tour__label"><svg class="tour__ico" aria-hidden="true"><use href="#i-lock"/></svg>Пароли</span><span class="tour__text">macOS прячет ввод паролей от всех программ. Раскладкин их не видит.</span></li>
+      <li data-reveal><span class="tour__label"><svg class="tour__ico" aria-hidden="true"><use href="#i-net"/></svg>Сеть</span><span class="tour__text">Ни запросов в интернет, ни аккаунтов. Все, что ты печатаешь, остается на маке.</span></li>
+      <li data-reveal><span class="tour__label"><svg class="tour__ico" aria-hidden="true"><use href="#i-code"/></svg>Исходники</span><span class="tour__text">Открыты: <a href="https://github.com/ddoodd222/raskladkin" target="_blank" rel="noopener">github.com/ddoodd222/raskladkin</a>. Что программа делает, можно проверить в коде.</span></li>
+    </ul>
+  </div>
+</section>
+
+<!-- 6. УДОБСТВО -->
+<section class="section s-paper handy center" id="handy" aria-labelledby="h-handy">
+  <div class="container mid">
+    <h2 class="eyebrow" id="h-handy">Удобство</h2>
+    <p class="display" data-split>Молчит там, где не нужен</p>
+    <ul class="tour">
+      <li data-reveal><span class="tour__label"><svg class="tour__ico" aria-hidden="true"><use href="#i-term"/></svg>Терминал</span><span class="tour__text">Terminal, iTerm, Warp, Ghostty он не трогает. Любое другое приложение добавляется в список из меню.</span></li>
+      <li data-reveal><span class="tour__label"><svg class="tour__ico" aria-hidden="true"><use href="#i-three"/></svg>Порог</span><span class="tour__text">Срабатывает после трех слов подряд. В меню можно поставить два или четыре.</span></li>
+      <li data-reveal><span class="tour__label"><svg class="tour__ico" aria-hidden="true"><use href="#i-switch"/></svg>Раскладка</span><span class="tour__text">После исправления переключает язык на нужный. Отключается одной галочкой.</span></li>
+      <li data-reveal><span class="tour__label"><svg class="tour__ico" aria-hidden="true"><use href="#i-feather"/></svg>Вес</span><span class="tour__text">2 МБ, живет в строке меню, ничего не крутится в фоне.</span></li>
+    </ul>
+  </div>
+</section>
+
+<!-- 7. МЕЛОЧИ -->
+<section class="section s-ink notes center" id="notes" aria-labelledby="h-notes">
+  <div class="container mid">
+    <h2 class="eyebrow" id="h-notes">Мелочи</h2>
+    <p class="display" data-split>Пара деталей для любопытных</p>
+    <ul class="notes__grid">
+      <li class="note" data-reveal>Смешанный текст чинится пословно: hello ghbdtn world → hello привет world.</li>
+      <li class="note" data-reveal>Слова проверяются по словарям macOS, ничего не скачивается.</li>
+      <li class="note" data-reveal>Буква ё остается как нажал: клавиша \ дает ё, клавиша t дает е.</li>
+      <li class="note" data-reveal>Сочетание можно поменять: ⌘⌥A, ⌥⇧Пробел или ⌃⌥L.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 8. УСТАНОВКА -->
+<section class="section s-paper install center" id="install" aria-labelledby="h-install">
+  <div class="container">
+    <h2 class="eyebrow" id="h-install">Установка</h2>
+    <p class="display" data-split>Четыре шага, из них два — настройки macOS</p>
+    <ol class="install__list">
+      <li class="istep" data-reveal>
+        <div class="istep__body"><span class="istep__n" aria-hidden="true">01</span><p>Скачай DMG и перетащи Раскладкин в папку «Программы».</p></div>
+        <figure class="sketch" aria-label="Набросок: окно образа диска, приложение перетаскивается в папку Программы">
+          <svg class="sketch__frame" viewBox="0 0 440 200" preserveAspectRatio="none" aria-hidden="true"><rect x="6" y="6" width="428" height="188" fill="var(--paper)" stroke="currentColor" stroke-width="3" filter="url(#wobble)"/></svg>
+          <div class="sketch__body"><span class="sketch__title">Раскладкин</span>
+            <div class="sketch__row"><div class="sketch__tile"><svg aria-hidden="true"><use href="#i-app"/></svg><span>Раскладкин</span></div><svg class="sketch__drag" viewBox="0 0 64 32" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 16h50"/><path d="M42 6l14 10-14 10"/></svg><div class="sketch__tile"><svg aria-hidden="true"><use href="#i-folder"/></svg><span>Программы</span></div></div>
+          </div>
+        </figure>
+      </li>
+      <li class="istep" data-reveal>
+        <div class="istep__body"><span class="istep__n" aria-hidden="true">02</span><p>Запусти. macOS покажет окно «не удалось проверить» — так бывает со всеми программами не из App Store. Открой Системные настройки → Конфиденциальность и безопасность и внизу нажми «Все равно открыть».</p></div>
+        <figure class="sketch" aria-label="Набросок системного окна macOS: не удалось проверить приложение, кнопка Все равно открыть">
+          <svg class="sketch__frame" viewBox="0 0 440 200" preserveAspectRatio="none" aria-hidden="true"><rect x="6" y="6" width="428" height="188" fill="var(--paper)" stroke="currentColor" stroke-width="3" filter="url(#wobble)"/></svg>
+          <div class="sketch__body">
+            <span class="sketch__title">Не удалось проверить «Раскладкин»</span>
+            <p class="sketch__p">Открыть можно в разделе «Конфиденциальность и безопасность».</p>
+            <div class="sketch__btns" aria-hidden="true"><span class="sketch__btn">Готово</span><span class="sketch__btn sketch__btn--go">Все равно открыть</span></div>
+          </div>
+          <figcaption class="sketch__hint"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M30 36C26 26 22 16 12 6"/><path d="M8 18l4-12 12 2"/></svg><span>жми сюда</span></figcaption>
+        </figure>
+      </li>
+      <li class="istep" data-reveal>
+        <div class="istep__body"><span class="istep__n" aria-hidden="true">03</span><p>В том же разделе включи «Универсальный доступ» для Раскладкина. Так он получает право видеть, что ты печатаешь.</p></div>
+        <figure class="sketch" aria-label="Набросок настроек macOS: раздел Универсальный доступ, переключатель Раскладкин включен">
+          <svg class="sketch__frame" viewBox="0 0 440 200" preserveAspectRatio="none" aria-hidden="true"><rect x="6" y="6" width="428" height="188" fill="var(--paper)" stroke="currentColor" stroke-width="3" filter="url(#wobble)"/></svg>
+          <div class="sketch__body"><span class="sketch__title">Универсальный доступ</span>
+            <div class="sketch__toggle"><span><svg aria-hidden="true"><use href="#i-app"/></svg>Раскладкин</span><span class="sw sw--on" aria-hidden="true"></span></div>
+            <div class="sketch__toggle"><span>Zoom</span><span class="sw" aria-hidden="true"></span></div>
+            <div class="sketch__toggle"><span>Telegram</span><span class="sw" aria-hidden="true"></span></div>
+          </div>
+        </figure>
+      </li>
+      <li class="istep" data-reveal>
+        <div class="istep__body"><span class="istep__n" aria-hidden="true">04</span><p>В строке меню появится клавиатура. Клик по ней — все настройки: порог, сочетание клавиш, режимы.</p></div>
+        <figure class="sketch" aria-label="Набросок строки меню macOS с иконкой клавиатуры и открытым меню Раскладкина">
+          <svg class="sketch__frame" viewBox="0 0 440 200" preserveAspectRatio="none" aria-hidden="true"><rect x="6" y="6" width="428" height="188" fill="var(--paper)" stroke="currentColor" stroke-width="3" filter="url(#wobble)"/></svg>
+          <div class="sketch__body">
+            <div class="sketch__menubar" aria-hidden="true"><span>Wi-Fi</span><span>100%</span><svg><use href="#i-keyboard"/></svg><span>12:00</span></div>
+            <ul class="sketch__menu" aria-hidden="true"><li class="is-on">Хоткей + автомат</li><li>Только хоткей</li><li>Выключен</li><li>Порог: 3 слова</li><li>Хоткей: ⌘⇧A</li></ul>
+          </div>
+        </figure>
+      </li>
+    </ol>
+    <div class="install__cta" data-stamp><a class="btn" href="https://github.com/ddoodd222/raskladkin/releases/latest/download/Raskladkin-1.0.dmg" download><svg class="btn__ico" aria-hidden="true"><use href="#i-down"/></svg>Скачать Раскладкин</a></div>
+  </div>
+</section>
+
+<!-- 9. ФИНАЛ -->
+<section class="section s-pink final center" id="download" aria-labelledby="h-final">
+  <div class="star final__star" data-star="final"><svg viewBox="0 0 200 200"><use href="#p-star"/></svg></div>
+  <div class="container">
+    <h2 class="eyebrow" id="h-final">Скачать</h2>
+    <p class="display display--display" data-split>Забирай и перестань перепечатывать — бесплатно, 2 МБ</p>
+    <div class="final__cta" data-stamp>
+      <a class="btn" href="https://github.com/ddoodd222/raskladkin/releases/latest/download/Raskladkin-1.0.dmg" download data-magnet><svg class="btn__ico" aria-hidden="true"><use href="#i-down"/></svg>Скачать Раскладкин</a>
+      <span class="final__note">Без подписки, без аккаунта, без рекламы</span>
+    </div>
+    <div class="donate mid" data-reveal>
+      <svg class="donate__heart" aria-hidden="true"><use href="#i-heart"/></svg>
+      <div class="donate__tx"><b>Поддержать Раскладкин</b><span>Бесплатный, без подписки. Донат — вклад в следующие утилиты.</span></div>
+      <button class="btn btn--ghost" id="donateBtn2" type="button"><svg class="btn__ico" aria-hidden="true"><use href="#i-heart"/></svg>Поддержать</button>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="s-ink foot">
+  <div class="zigzag" aria-hidden="true"></div>
+  <div class="container">
+    <span>Раскладкин 1.0</span><span>macOS 13+</span><span>сделал Eternal Memory для себя и друзей</span>
+    <span class="keys" aria-label="Хоткей ⌘⇧A"><span class="keycap keycap--s">⌘</span><span class="keycap keycap--s">⇧</span><span class="keycap keycap--s">A</span></span>
+    <button class="sticker" id="donateBtn3" type="button"><svg aria-hidden="true"><use href="#i-heart"/></svg>Поддержать</button>
+    <a href="https://github.com/ddoodd222/raskladkin" target="_blank" rel="noopener">исходники</a>
+  </div>
+</footer>
+
+<a class="btn sticky-cta" href="https://github.com/ddoodd222/raskladkin/releases/latest/download/Raskladkin-1.0.dmg" download id="stickyCta"><svg class="btn__ico" aria-hidden="true"><use href="#i-down"/></svg>Скачать Раскладкин</a>
+
+<div class="modal-bg" id="donateModal" role="dialog" aria-modal="true" aria-labelledby="donateTitle" hidden>
+  <div class="modal" data-lenis-prevent>
+    <button class="mclose" id="mClose" aria-label="Закрыть"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <svg class="mheart" aria-hidden="true"><use href="#i-heart"/></svg>
+    <h3 id="donateTitle">Поддержать проект</h3>
+    <p class="msub">Раскладкин бесплатный. Донат — подарок на новые функции и утилиты. Спасибо!</p>
+    <div id="donateOpts"></div>
+    <p class="mnote" id="donateNote"></p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14/dist/ScrollTrigger.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14/dist/SplitText.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14/dist/MorphSVGPlugin.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.3.23/dist/lenis.min.js"></script>
+<script>
+"use strict";
+/* ================================================================
+   ⚙️ НАСТРОЙКА ДОНАТОВ — впишите свои данные (пустые поля скрываются)
+   ================================================================ */
+const _coin=(bg,g)=>`<svg viewBox="0 0 24 24" width="34" height="34" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="${bg}"/>${g}</svg>`;
+const ICO={
+  btc:_coin('#F7931A','<path fill="#fff" d="M15.5 10.4c.2-1.36-.84-2.1-2.26-2.58l.46-1.85-1.13-.28-.45 1.8c-.3-.07-.6-.14-.9-.2l.45-1.82-1.12-.28-.46 1.85c-.24-.05-.48-.11-.71-.17l-1.56-.39-.3 1.2s.84.2.82.2c.46.12.54.42.53.66l-.53 2.12c.03.01.07.02.12.04l-.12-.03-.74 2.96c-.06.14-.2.35-.52.27.01.02-.82-.2-.82-.2l-.56 1.29 1.47.36c.27.07.54.14.8.21l-.46 1.87 1.12.28.46-1.85c.31.08.6.16.9.23l-.46 1.84 1.13.28.46-1.86c1.92.36 3.37.22 3.98-1.52.49-1.4-.02-2.2-1.03-2.73.73-.17 1.29-.65 1.44-1.65zm-2.57 3.6c-.35 1.4-2.7.64-3.46.45l.62-2.48c.76.19 3.2.56 2.84 2.03zm.35-3.62c-.32 1.27-2.27.63-2.9.47l.56-2.25c.63.16 2.67.45 2.34 1.78z"/>'),
+  eth:_coin('#627EEA','<path fill="#fff" fill-opacity=".9" d="M12 4 7.5 12l4.5-2.15z"/><path fill="#fff" d="M12 4v5.85L16.5 12z"/><path fill="#fff" fill-opacity=".9" d="M12 15.4 7.5 12.9 12 20z"/><path fill="#fff" d="M12 20v-4.6L16.5 12.9z"/><path fill="#fff" fill-opacity=".55" d="M12 14.5 16.5 12 12 9.85z"/><path fill="#fff" fill-opacity=".8" d="M7.5 12 12 14.5V9.85z"/>'),
+  ltc:_coin('#345D9D','<g fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M13.6 6.8 11 16.8h5"/><path d="M8.8 12.6 15 10.7"/></g>'),
+  doge:_coin('#C2A633','<g fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9.2 6.8h3c2.7 0 4.5 2 4.5 5.2s-1.8 5.2-4.5 5.2h-3z"/><path d="M7.4 12h4.2"/></g>'),
+  pol:_coin('#8247E5','<path fill="#fff" d="M15.4 9.9a1.1 1.1 0 0 0-1.1 0l-2.5 1.46-1.7.96-2.5 1.46a1.1 1.1 0 0 1-1.1 0l-1.98-1.15a1.1 1.1 0 0 1-.55-.95V9.36c0-.4.2-.77.55-.96l1.95-1.13a1.1 1.1 0 0 1 1.1 0l1.95 1.13c.34.19.55.56.55.96v1.46l1.7-.99V8.37c0-.39-.2-.76-.55-.95l-3.6-2.1a1.1 1.1 0 0 0-1.1 0L2.8 7.42a1.1 1.1 0 0 0-.55.95v4.22c0 .39.2.76.55.95l3.66 2.12a1.1 1.1 0 0 0 1.1 0l2.5-1.44 1.7-.99 2.5-1.44a1.1 1.1 0 0 1 1.1 0l1.96 1.13c.34.2.55.56.55.96v2.26c0 .39-.2.76-.55.95l-1.95 1.14a1.1 1.1 0 0 1-1.1 0l-1.95-1.13a1.1 1.1 0 0 1-.55-.96v-1.44l-1.7.99v1.46c0 .39.2.76.55.95l3.66 2.12a1.1 1.1 0 0 0 1.1 0l3.66-2.12c.34-.19.55-.56.55-.95v-4.23c0-.39-.2-.76-.55-.95L15.4 9.9z"/>'),
+  ada:_coin('#0033AD','<g fill="#fff"><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="6.6" r=".95"/><circle cx="12" cy="17.4" r=".95"/><circle cx="7.3" cy="9.3" r=".95"/><circle cx="16.7" cy="9.3" r=".95"/><circle cx="7.3" cy="14.7" r=".95"/><circle cx="16.7" cy="14.7" r=".95"/><circle cx="6" cy="12" r=".65"/><circle cx="18" cy="12" r=".65"/><circle cx="9.7" cy="7.9" r=".55"/><circle cx="14.3" cy="7.9" r=".55"/><circle cx="9.7" cy="16.1" r=".55"/><circle cx="14.3" cy="16.1" r=".55"/></g>'),
+  xlm:_coin('#000000','<circle cx="12" cy="12" r="11.2" fill="none" stroke="rgba(255,255,255,.28)"/><g fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round"><path d="M5.7 9.4a7.4 7.4 0 0 1 12.6 3.3"/><path d="M18.3 14.6A7.4 7.4 0 0 1 5.7 11.3"/></g><circle cx="12" cy="12" r="1.7" fill="#fff"/>'),
+  avax:_coin('#E84142','<path fill="#fff" d="M12.75 7.3c.5-.87 1.45-.87 1.95 0l3.8 6.6c.5.87.05 1.6-1 1.6h-1.75c-.55 0-.98-.27-1.2-.68l-2.6-4.55c-.3-.53-.3-1.15 0-1.7l.8-1.27z"/><path fill="#fff" d="M9 12.85c.5-.87 1.45-.87 1.9 0l1.65 2.85c.48.87.03 1.6-1 1.6H8.05c-1.02 0-1.47-.73-.98-1.6L9 12.85z"/>'),
+};
+const DONATE = {
+  platformName: 'Boosty',
+  platformUrl : 'https://boosty.to/ВАШ_НИК',   // ← ссылка на страницу доната. Пусто/ВАШ_НИК = скрыто
+  platformSub : 'карта · СБП · подписка',
+  crypto: [
+    { name:'Bitcoin',   net:'BTC',     icon:ICO.btc,  addr:'bc1qvzuw988uzyh8k3pzy8gzduhc3cn4g6lvusj9w0' },
+    { name:'Ethereum',  net:'ERC-20',  icon:ICO.eth,  addr:'0x1727c960db92Dc4711ff1a7e8f082D89A3e2D4dA' },
+    { name:'Litecoin',  net:'LTC',     icon:ICO.ltc,  addr:'ltc1qpjymg8hzftjrv6z3ymy5puv9e2t5ljwnqlv72l' },
+    { name:'Dogecoin',  net:'DOGE',    icon:ICO.doge, addr:'D8TyowZszSJiYEKKGuiFLCW3UtcYKvCZuZ' },
+    { name:'Polygon',   net:'PoS',     icon:ICO.pol,  addr:'0x1727c960db92Dc4711ff1a7e8f082D89A3e2D4dA' },
+    { name:'Cardano',   net:'ADA',     icon:ICO.ada,  addr:'addr1qxp55k3knqydjkqpt888j8hq4j5mypfsxj68h4qh57fhqcttfhmc443yydmfmze045tqn9zel5psad4rk669rjy3syxsya00ml' },
+    { name:'Stellar',   net:'XLM',     icon:ICO.xlm,  addr:'GDFPGXJIN3RU2CKZGHMVM23L4NKSFY5BEIO23SOJVTIOTNYBIZDUDJ4L' },
+    { name:'Avalanche', net:'C-Chain', icon:ICO.avax, addr:'0x1727c960db92Dc4711ff1a7e8f082D89A3e2D4dA' },
+  ],
+  showCryptoNote: true,
+};
+
+/* ============ КОНВЕРТЕР РАСКЛАДКИ (как в приложении, для демо) ============ */
+const EN='"#$%&\'*,.:;<>@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^`abcdefghijklmnopqrstuvwxyz{|}~§±';
+const RU='Э№%:.э;бюЖжБЮ"ФИСВУАПРШОЛДЬТЩЗЙКЫЕГМЦЧНЯхёъ,]фисвуапршолдьтщзйкыегмцчняХЁЪ[><';
+const EN2RU=new Map();
+for(let i=0;i<EN.length;i++)EN2RU.set(EN[i],RU[i]);
+const KEEP=new Set('figma hello world in the a and is or to of on at for it you we ok mac macos telegram slack chrome github dmg punto raycast notion ios app apple'.split(' '));
+const toRu=s=>[...s].map(c=>EN2RU.get(c)??c).join('');
+const isLatin=w=>/[A-Za-z]/.test(w)&&!/[А-Яа-яЁё]/.test(w);
+function fixText(text){
+  return text.split(/(\s+)/).map(tok=>{
+    if(!tok.trim()||!isLatin(tok))return tok;
+    const core=tok.replace(/^[^A-Za-z]+|[^A-Za-z]+$/g,'').toLowerCase();
+    return KEEP.has(core)?tok:toRu(tok);
+  }).join('');
+}
+
+/* ============ УТИЛИТЫ ============ */
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const REDUCE=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const FINE=matchMedia('(hover:hover) and (pointer:fine)').matches;
+const WEAK=(navigator.hardwareConcurrency||8)<=4||!FINE;
+const HAS=typeof gsap!=='undefined';
+if(REDUCE)document.documentElement.classList.add('reduce');
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+/* перепечатка: символы переворачиваются и меняются */
+function setChars(el,text){el.innerHTML='';for(const c of text){const s=document.createElement('span');s.className='ch';s.textContent=c;el.appendChild(s);}}
+async function flipTo(el,text){
+  if(REDUCE){el.textContent=text;return;}
+  const old=el.textContent;if(old===text)return;
+  const n=Math.max(old.length,text.length);setChars(el,old.padEnd(n,' '));
+  const chs=$$('.ch',el);
+  for(let i=0;i<n;i++){const s=chs[i];if(old[i]===text[i])continue;setTimeout(()=>{s.classList.add('is-flip');setTimeout(()=>{s.textContent=text[i]??'';s.classList.remove('is-flip');s.classList.add('is-new');},240);},i*25);}
+  await sleep(n*25+320);
+  el.textContent=text;
+}
+
+/* ============ ШАПКА ============ */
+(function(){const top=$('#topbar');const upd=()=>top.classList.toggle('is-scrolled',scrollY>40);addEventListener('scroll',upd,{passive:true});upd();})();
+
+/* ============ HERO: живая перепечатка ============ */
+(function heroLoop(){
+  const typed=$('[data-typed="hero"]'),badge=$('[data-badge="hero"]'),count=$('[data-count="hero"]');
+  if(!typed||REDUCE)return;
+  const WRONG='ghbdtn rfr ltkf',RIGHT='привет как дела';
+  let visible=true,alive=true;
+  new IntersectionObserver(e=>{visible=e[0].isIntersecting;},{threshold:.1}).observe(typed);
+  document.addEventListener('visibilitychange',()=>{alive=!document.hidden;});
+  const wait=async ms=>{await sleep(ms);while(!visible||!alive)await sleep(250);};
+  (async()=>{
+    await sleep(900);
+    for(;;){
+      typed.textContent='';badge.textContent='EN';badge.classList.remove('is-ru');count.textContent='0/3';
+      let words=0;
+      for(let i=0;i<WRONG.length;i++){typed.textContent+=WRONG[i];if(WRONG[i]===' '||i===WRONG.length-1){words++;count.textContent=words+'/3';}await wait(55+Math.random()*40);}
+      await wait(650);
+      for(let i=WRONG.length;i>0;i--){typed.textContent=WRONG.slice(0,i-1);await wait(28);}
+      await wait(120);
+      for(let i=0;i<RIGHT.length;i++){typed.textContent+=RIGHT[i];await wait(45);}
+      badge.textContent='RU';badge.classList.add('is-ru');count.textContent='готово';
+      await wait(2200);
+    }
+  })();
+})();
+
+/* ============ ДОНАТЫ ============ */
+function copyText(t){try{navigator.clipboard.writeText(t);}catch(e){const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');}catch(_){}a.remove();}}
+function buildDonate(){
+  const box=$('#donateOpts');box.innerHTML='';let hasCrypto=false;
+  if(DONATE.platformUrl&&!/ВАШ_НИК/.test(DONATE.platformUrl)){
+    const a=document.createElement('a');a.className='dopt';a.href=DONATE.platformUrl;a.target='_blank';a.rel='noopener';
+    a.innerHTML=`<span class="dic">₽</span><span class="dtx"><span class="dt">Поддержать на ${DONATE.platformName}</span><span class="ds">${DONATE.platformSub||''}</span></span><span class="darr">↗</span>`;
+    box.appendChild(a);
+  }
+  (DONATE.crypto||[]).filter(c=>c.addr&&!/ВСТАВ|ВАШ_/.test(c.addr)).forEach(c=>{hasCrypto=true;
+    const btn=document.createElement('button');btn.className='dopt';btn.type='button';
+    const short=c.addr.length>20?c.addr.slice(0,10)+'…'+c.addr.slice(-6):c.addr;
+    btn.innerHTML=`<span class="dic coin">${c.icon||'◈'}</span><span class="dtx"><span class="dt">${c.name}${c.net?` · ${c.net}`:''}</span><span class="ds">${short}</span></span><span class="darr">копировать</span>`;
+    btn.onclick=()=>{copyText(c.addr);btn.classList.add('copied');btn.querySelector('.darr').textContent='скопировано ✓';setTimeout(()=>{btn.classList.remove('copied');btn.querySelector('.darr').textContent='копировать';},1600);};
+    box.appendChild(btn);
+  });
+  if(!box.children.length)box.innerHTML='<p class="msub">Впишите ссылку или кошелек в объект <b>DONATE</b> в коде — и здесь появятся кнопки.</p>';
+  $('#donateNote').textContent=(hasCrypto&&DONATE.showCryptoNote)?'Крипто-переводы — добровольный подарок. Здесь ничего не продается.':'Донаты добровольные — ни за что не начисляются и ничего не гарантируют.';
+}
+(function(){const m=$('#donateModal'),c=$('#mClose');let last=null;
+  const open=()=>{last=document.activeElement;buildDonate();m.hidden=false;m.classList.add('open');c.focus();if(window.__lenis)window.__lenis.stop();document.body.style.overflow='hidden';};
+  const close=()=>{m.classList.remove('open');m.hidden=true;if(window.__lenis)window.__lenis.start();document.body.style.overflow='';if(last)last.focus();};
+  ['#donateBtn','#donateBtn2','#donateBtn3'].forEach(id=>{const b=$(id);if(b)b.onclick=open;});
+  c.onclick=close;m.addEventListener('click',e=>{if(e.target===m)close();});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&m.classList.contains('open'))close();});
+})();
+
+/* ============ ХОТКЕЙ НА СТРАНИЦЕ (тренажер) ============ */
+(function hotkey(){
+  const sample=$('[data-sample]'),btn=$('#fixBtn'),status=$('#fixStatus'),keys={Meta:$('[data-key="Meta"]'),Shift:$('[data-key="Shift"]'),KeyA:$('[data-key="KeyA"]')};
+  if(!sample)return;
+  const ORIG=sample.textContent;let fixed=false,busy=false;
+  async function toggle(){
+    if(busy)return;busy=true;
+    const sel=window.getSelection();const selText=sel&&sample.contains(sel.anchorNode)&&sel.toString().trim();
+    let next;
+    if(selText&&!fixed){const cur=sample.textContent;next=cur.replace(selText,fixText(selText));}
+    else next=fixed?ORIG:fixText(ORIG);
+    sel&&sel.removeAllRanges();
+    await flipTo(sample,next);
+    fixed=next!==ORIG;
+    status.textContent=fixed?'Текст исправлен: '+next:'Текст возвращен: '+next;
+    busy=false;
+  }
+  btn.addEventListener('click',()=>{Object.values(keys).forEach(k=>k.classList.add('is-down'));setTimeout(()=>Object.values(keys).forEach(k=>k.classList.remove('is-down')),260);toggle();});
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Meta'||e.key==='Control')keys.Meta.classList.add('is-down');
+    if(e.key==='Shift')keys.Shift.classList.add('is-down');
+    if((e.metaKey||e.ctrlKey)&&e.shiftKey&&e.code==='KeyA'){e.preventDefault();keys.KeyA.classList.add('is-down');toggle();}
+  });
+  document.addEventListener('keyup',e=>{
+    if(e.key==='Meta'||e.key==='Control')keys.Meta.classList.remove('is-down');
+    if(e.key==='Shift')keys.Shift.classList.remove('is-down');
+    if(e.code==='KeyA')keys.KeyA.classList.remove('is-down');
+  });
+  window.addEventListener('blur',()=>Object.values(keys).forEach(k=>k.classList.remove('is-down')));
+})();
+
+/* ============ STICKY CTA (мобайл) ============ */
+(function(){const cta=$('#stickyCta'),hero=$('.hero'),fin=$('.final'),foot=$('.foot');if(!cta)return;let pastHero=false,inFinal=false,inFoot=false;const upd=()=>cta.classList.toggle('is-on',pastHero&&!inFinal&&!inFoot);
+  new IntersectionObserver(e=>{pastHero=!e[0].isIntersecting&&e[0].boundingClientRect.top<0;upd();},{threshold:0}).observe(hero);
+  new IntersectionObserver(e=>{inFinal=e[0].isIntersecting;upd();},{threshold:.2}).observe(fin);
+  new IntersectionObserver(e=>{inFoot=e[0].isIntersecting;upd();},{threshold:0}).observe(foot);
+})();
+
+/* ============ МОУШЕН (GSAP + Lenis), без pin и без scrub на контенте ============ */
+if(HAS&&!REDUCE){
+  gsap.registerPlugin(ScrollTrigger,SplitText,MorphSVGPlugin);
+  const STAR=$('#p-star').getAttribute('d'),BLOB=$('#p-blob').getAttribute('d');
+
+  if(typeof Lenis!=='undefined'&&FINE){
+    const lenis=new Lenis({lerp:0.1});window.__lenis=lenis;
+    lenis.on('scroll',ScrollTrigger.update);
+    gsap.ticker.add(t=>lenis.raf(t*1000));
+    gsap.ticker.lagSmoothing(0);
+    $$('a[href^="#"]').forEach(a=>a.addEventListener('click',e=>{const t=$(a.getAttribute('href'));if(t){e.preventDefault();lenis.scrollTo(t,{offset:-72});}}));
+  }
+
+  /* page-load hero */
+  const tl=gsap.timeline({defaults:{ease:'power4.out'}});
+  tl.from('.top',{yPercent:-120,autoAlpha:0,duration:.5,ease:'power3.out'},0)
+    .from('.hero__title .w',{yPercent:60,autoAlpha:0,duration:.9,stagger:.05},.15)
+    .from('.hero__star',{scale:0,rotation:-20,autoAlpha:0,duration:.7,ease:'back.out(1.6)',transformOrigin:'50% 50%'},.4)
+    .from('.hero__stickers .sticker, .hero__cta > *',{scale:1.15,autoAlpha:0,duration:.45,stagger:.08,ease:'back.out(2)'},.7)
+    .to('.hero [data-reveal]',{autoAlpha:1,duration:.5},.8);
+
+  /* тихий reveal: только появление, без масштабов и поворотов */
+  $$('[data-reveal]').forEach(el=>{if(el.closest('.hero'))return;
+    gsap.fromTo(el,{autoAlpha:0,y:16},{autoAlpha:1,y:0,duration:.5,ease:'power3.out',scrollTrigger:{trigger:el,start:'top 90%',once:true}});
+  });
+  $$('[data-stamp]').forEach(g=>{if(g.closest('.hero'))return;
+    gsap.from(g.children,{scale:1.1,autoAlpha:0,duration:.4,stagger:.06,ease:'back.out(1.6)',scrollTrigger:{trigger:g,start:'top 92%',once:true}});
+  });
+  document.fonts.ready.then(()=>{
+    $$('[data-split]').forEach(el=>{
+      SplitText.create(el,{type:'lines',mask:'lines',autoSplit:true,onSplit(self){return gsap.from(self.lines,{yPercent:110,duration:.7,stagger:.07,ease:'power4.out',scrollTrigger:{trigger:el,start:'top 90%',once:true}});}});
+    });
+  });
+
+  /* морф звезда ↔ клякса (декор, не контент) */
+  $$('[data-star]').forEach(st=>{
+    const use=$('use',st);const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('d',st.dataset.star==='hot2'?BLOB:STAR);use.replaceWith(path);
+    if(st.dataset.star==='final'){
+      gsap.timeline({scrollTrigger:{trigger:'.final',start:'top bottom',end:'bottom top',scrub:1}})
+        .to(path,{morphSVG:BLOB,ease:'none'}).to(path,{morphSVG:STAR,ease:'none'});
+    }else{
+      let toBlob=st.dataset.star!=='hot2';
+      setInterval(()=>{gsap.to(path,{morphSVG:toBlob?BLOB:STAR,duration:.9,ease:'power2.inOut'});toBlob=!toBlob;},3500);
+      gsap.to(path,{rotation:360,transformOrigin:'50% 50%',duration:60,repeat:-1,ease:'none'});
+    }
+  });
+  if(FINE&&!WEAK){
+    const st=$('.hero__star');const xTo=gsap.quickTo(st,'x',{duration:.8,ease:'power3'}),yTo=gsap.quickTo(st,'y',{duration:.8,ease:'power3'});
+    $('.hero').addEventListener('mousemove',e=>{xTo((e.clientX/innerWidth-.5)*40);yTo((e.clientY/innerHeight-.5)*40);});
+    $$('[data-magnet]').forEach(btn=>{
+      const bx=gsap.quickTo(btn,'x',{duration:.4,ease:'power3'}),by=gsap.quickTo(btn,'y',{duration:.4,ease:'power3'});
+      btn.addEventListener('mousemove',e=>{const r=btn.getBoundingClientRect();bx((e.clientX-r.left-r.width/2)*.25);by((e.clientY-r.top-r.height/2)*.25);});
+      btn.addEventListener('mouseleave',()=>{bx(0);by(0);});
+    });
+  }
+}else if(HAS&&REDUCE){
+  gsap.set('[data-reveal]',{clearProps:'all'});
+}
+</script>
+</body>
+</html>
